@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#16212b">
+    <meta name="description" content="Auto-Track POS for auto supply and service shops: checkout, inventory, purchasing, returns, and daily controls.">
+    <title>Auto-Track POS</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/css/app.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <div class="prototype-banner" id="connection-banner" role="status" aria-live="polite">
+      Connecting to the shop server…
+    </div>
+    <div class="app-shell" id="app">
+      <aside class="sidebar" id="app-sidebar" aria-label="Primary navigation"></aside>
+      <div class="app-frame">
+        <header class="topbar" id="app-topbar"></header>
+        <main class="main-content" id="main-content" tabindex="-1"></main>
+        <footer class="app-footer">
+          <span>Auto-Track · Auto Supply &amp; Service POS</span>
+          <span>Shop server · PostgreSQL system of record</span>
+        </footer>
+      </div>
+    </div>
+    <button class="mobile-scrim" type="button" data-nav-toggle aria-label="Close navigation" tabindex="-1"></button>
+    <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="false"></div>
+    <dialog class="modal" id="app-dialog"></dialog>
+    <noscript>
+      <div class="noscript">Auto-Track needs JavaScript enabled to reach the shop server.</div>
+    </noscript>
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>

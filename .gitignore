@@ -1,0 +1,15 @@
+# Dependencies and build output
+node_modules/
+coverage/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Local runtime state
+*.log
+.tmp/
+backups/
+pgdata/
+pgsql/
