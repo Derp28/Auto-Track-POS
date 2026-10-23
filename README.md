@@ -7,6 +7,22 @@ framework-free frontend served by the same process.
 Run it on the shop machine, open `http://127.0.0.1:3100`, and sell. There is no cloud
 component, no offline mode, and no connection to any payment processor.
 
+## Interactive demo
+
+A browser-only preview of this interface is published with GitHub Pages:
+
+- Landing page: <https://derp28.github.io/Auto-Track-POS/>
+- Built from `public/` plus an in-memory mock API in `demo/`
+- Demo accounts: `admin`, `cashier`, `cashier2` — password `demo1234`
+- Rebuild the published files with `npm run demo:build` (output: `docs/`)
+
+The demo has no PostgreSQL, server, sessions, or persistence: sample data is seeded on
+load and resets on reload. It demonstrates the UI and workflows only — it is not the
+production system. To attach a custom domain, register it, point its DNS at GitHub
+Pages, then build with `DEMO_DOMAIN=autotrackpos.com npm run demo:build` and commit
+`docs/CNAME`. Pages redirects the `github.io` URL to the custom domain as soon as that
+file exists, so set it only after DNS resolves.
+
 ## Status
 
 - Stage 1 UI: approved (GATE-1).

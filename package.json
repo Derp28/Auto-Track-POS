@@ -17,6 +17,7 @@
     "test:workflows": "node --test --test-concurrency=1 tests/workflows.test.mjs",
     "test:ui": "node scripts/test-ui.mjs",
     "check": "node scripts/check-ui.mjs",
+    "demo:build": "node scripts/build-demo.mjs",
     "verify": "node scripts/check-ui.mjs && node scripts/test-ui.mjs && node --test --test-concurrency=1 \"tests/*.test.mjs\"",
     "backup": "node scripts/backup.mjs",
     "restore": "node scripts/restore.mjs"
