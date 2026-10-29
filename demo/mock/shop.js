@@ -13,7 +13,7 @@ import {
   wacFor,
 } from './money.js';
 
-export const DEMO_VERSION = '0.2.0-stage2';
+export const DEMO_VERSION = '1.0.0';
 export const DEMO_PASSWORD = 'demo1234';
 
 export class DemoError extends Error {

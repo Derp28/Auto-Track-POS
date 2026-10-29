@@ -84,7 +84,7 @@ export function installDemoBackend() {
         clockIso: new Date().toISOString(),
         businessDate: localDate(new Date()),
         defaultTerminal: 'Counter 1',
-        appVersion: '0.2.0-stage2',
+        appVersion: '1.0.0',
         dataSource: 'Sample data in your browser — nothing is saved',
         stageLabel: 'Interactive demo',
       },
