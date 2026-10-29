@@ -211,10 +211,21 @@ export function debounce(fn, delay = 180) {
 }
 
 export function printPrototype(kind = 'report') {
+  // Receipts print with no page margin so the browser cannot draw its own
+  // header/footer (URL, date, page numbers) around the receipt. The receipt
+  // supplies its own padding instead.
+  const receiptPage = kind === 'receipt' ? document.createElement('style') : null;
+  if (receiptPage) {
+    receiptPage.textContent = '@media print { @page { margin: 0; } body.print-receipt .receipt-print { padding: 3mm 2mm; } }';
+    document.head.append(receiptPage);
+  }
   document.body.classList.add(`print-${kind}`);
   window.setTimeout(() => {
     window.print();
-    window.setTimeout(() => document.body.classList.remove(`print-${kind}`), 200);
+    window.setTimeout(() => {
+      document.body.classList.remove(`print-${kind}`);
+      receiptPage?.remove();
+    }, 200);
   }, 50);
 }
 
