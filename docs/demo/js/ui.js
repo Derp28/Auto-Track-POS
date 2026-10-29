@@ -32,6 +32,7 @@ export function icon(name, size = 18) {
     plus: '<path d="M12 5v14M5 12h14"/>',
     minus: '<path d="M5 12h14"/>',
     print: '<path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
+    download: '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
     x: '<path d="M6 6l12 12M18 6L6 18"/>',
     check: '<path d="M4 12l5 5L20 6"/>',
     alert: '<path d="M12 3l10 18H2L12 3z"/><path d="M12 9v5M12 17h.01"/>',
