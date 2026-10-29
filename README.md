@@ -40,6 +40,8 @@ file exists, so set it only after DNS resolves.
   receiving, adjustments, movements history, low-stock and valuation reports.
 - **Returns and voids** — separate documents, proportional or exact cost restoration,
   refund records; payments are immutable.
+- **Receipts** — 80 mm browser print or an in-browser PDF download; each reprint is
+  audited.
 - **Purchasing** — suppliers, purchase orders, partial receipts.
 - **Catalog** — categories, products, prices, costs, reorder levels.
 - **Users and roles** — `ADMIN` and `CASHIER` with a server-enforced permission matrix.
