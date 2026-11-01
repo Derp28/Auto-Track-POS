@@ -180,7 +180,7 @@ apps are not part of this Stage 2 scope.
 - GATE-1: passed.
 - GATE-2: passed.
 - T-201 through T-218: done with evidence on PostgreSQL.
-- T-225 MySQL local variant: implementation and full suite verified; branch/publish pending.
+- T-225 MySQL local variant: implementation, full suite, first-run launcher, and demo rebuild verified; published on `local-mysql` at commit `89defa3`.
 - Local self-hosted website workflows: verified on loopback with the isolated MySQL test
   database.
 - T-219 LAN pilot: deferred by user direction.
