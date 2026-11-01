@@ -1324,7 +1324,7 @@ export function createShop(seed) {
       },
       database: {
         version: '—',
-        postgres: 'No PostgreSQL in the demo · fixture data in memory',
+        mysql: 'No MySQL in the demo · fixture data in memory',
         name: 'demo-fixtures',
         startedAt: state.startedAt,
         migrations: [

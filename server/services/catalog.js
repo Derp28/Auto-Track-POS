@@ -96,7 +96,7 @@ async function assertProductUnique(client, data, excludeId = null) {
 export async function listProducts({ query: search = '', categoryId = null, includeInactive = false, lowStock = false, limit = 100, offset = 0, includeCost = true } = {}) {
   const { rows } = await query(
     `${PRODUCT_SELECT}
-     WHERE ($1::text = '' OR p.name ILIKE '%' || $1 || '%' OR p.sku ILIKE '%' || $1 || '%' OR COALESCE(p.barcode, '') ILIKE '%' || $1 || '%')
+     WHERE ($1::text = '' OR p.name LIKE CONCAT('%', $1, '%') OR p.sku LIKE CONCAT('%', $1, '%') OR COALESCE(p.barcode, '') LIKE CONCAT('%', $1, '%'))
        AND ($2::bigint IS NULL OR p.category_id = $2)
        AND ($3::boolean OR p.active)
        AND (NOT $4::boolean OR (p.active AND p.stock_on_hand <= p.reorder_level))

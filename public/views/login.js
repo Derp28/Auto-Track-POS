@@ -18,7 +18,7 @@ function setBanner(text) {
 }
 
 function liveBanner(state) {
-  setBanner(`Live shop server · ${state.store.meta.dataSource || 'PostgreSQL'} · ${state.store.meta.businessDate || 'connected'}`);
+  setBanner(`Live shop server · ${state.store.meta.dataSource || 'MySQL'} · ${state.store.meta.businessDate || 'connected'}`);
 }
 
 function errorHtml(error) {
@@ -177,12 +177,12 @@ export function renderLogin(ctx) {
           <p class="login-hero__lead">Checkout, parts inventory, purchasing, returns, and daily controls in one connected shop system.</p>
           <div class="login-hero__points">
             <div><span>${icon('cart', 18)}</span><div><strong>Counter-ready checkout</strong><small>Search, scan, discount, and take cash or external-card payments.</small></div></div>
-            <div><span>${icon('layers', 18)}</span><div><strong>Stock you can trust</strong><small>Every checkout and receiving record updates inventory in PostgreSQL.</small></div></div>
+            <div><span>${icon('layers', 18)}</span><div><strong>Stock you can trust</strong><small>Every checkout and receiving record updates inventory in MySQL.</small></div></div>
             <div><span>${icon('lock', 18)}</span><div><strong>Role-aware access</strong><small>Administrators and cashiers sign in with their own server-side account.</small></div></div>
           </div>
           <div class="info-note info-note--dark" role="note">
             ${icon('info', 18)}
-            <p><strong>Shop-server access only.</strong> This browser talks to the Express API. It never connects to PostgreSQL directly, and it does not store a database password.</p>
+            <p><strong>Shop-server access only.</strong> This browser talks to the Express API. It never connects to MySQL directly, and it does not store a database password.</p>
           </div>
         </section>
         <section class="login-card" aria-labelledby="login-title">
@@ -197,7 +197,7 @@ export function renderLogin(ctx) {
           ${panel}
           <div class="login-card__foot">
             <span>${icon('lock', 15)} Server-side sessions</span>
-            <span>${state.setupRequired ? 'First-run setup' : 'PostgreSQL system of record'}</span>
+            <span>${state.setupRequired ? 'First-run setup' : 'MySQL system of record'}</span>
           </div>
         </section>
       </div>

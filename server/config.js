@@ -70,8 +70,11 @@ export function requireDatabaseConfig({ migration = false } = {}) {
     throw new Error(
       migration
         ? 'MIGRATION_DATABASE_URL (or DATABASE_URL) is required to run migrations.'
-        : 'DATABASE_URL is required. Copy .env.example to .env and configure PostgreSQL.',
+        : 'DATABASE_URL is required. Copy .env.example to .env and configure MySQL.',
     );
+  }
+  if (!/^mysql:\/\//i.test(url)) {
+    throw new Error('This local variant requires a mysql:// database URL.');
   }
   if (/CHANGE_ME|password@/i.test(url)) {
     throw new Error('The database URL still contains a placeholder password.');

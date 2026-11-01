@@ -268,7 +268,7 @@ test('bootstrap returns the approved shop state without leaking costs to cashier
   assert.equal(adminBoot.body.user.role, 'ADMIN');
   assert.equal(adminBoot.body.products[0].costCents, 6000);
   assert.equal(adminBoot.body.users.length, 2);
-  assert.equal(adminBoot.body.meta.dataSource, 'PostgreSQL via Express API');
+  assert.equal(adminBoot.body.meta.dataSource, 'MySQL via Express API');
 
   const cashierBoot = await api(base, 'GET', '/api/bootstrap', { session: cashier.session });
   assertStatus(cashierBoot, 200);

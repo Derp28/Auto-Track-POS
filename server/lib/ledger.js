@@ -31,10 +31,8 @@ export async function claimIdempotency(client, { key, userId, endpoint, payload 
   }
   const hash = hashPayload(payload);
   const inserted = await client.query(
-    `INSERT INTO idempotency_keys (client_request_id, user_id, endpoint, payload_hash)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (client_request_id) DO NOTHING
-     RETURNING client_request_id`,
+    `INSERT IGNORE INTO idempotency_keys (client_request_id, user_id, endpoint, payload_hash)
+     VALUES ($1, $2, $3, $4)`,
     [key, userId, endpoint, hash],
   );
   if (inserted.rowCount === 0) {

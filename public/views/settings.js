@@ -84,7 +84,7 @@ export function renderSettings(ctx) {
               <div><span>Terminal</span><strong>${escapeHtml(state.terminalLabel)}</strong></div>
             </div>
             <button class="btn btn--primary btn--block" type="submit">${icon('check', 17)} Save settings</button>
-            <p class="info-disclaimer">${icon('lock', 14)} Saved to PostgreSQL · administrator only</p>
+            <p class="info-disclaimer">${icon('lock', 14)} Saved to MySQL · administrator only</p>
           </section>
         </aside>
       </form>

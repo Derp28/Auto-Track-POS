@@ -7,9 +7,13 @@ coverage/
 .env.*
 !.env.example
 
-# Local runtime state
+# Local runtime state (portable MySQL binaries, data, logs, secrets, PID files)
+.runtime/
 *.log
 .tmp/
 backups/
 pgdata/
 pgsql/
+*.dump
+*.dump.sha256
+*.dump.json

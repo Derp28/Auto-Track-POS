@@ -1,4 +1,4 @@
-# Auto-Track POS — LAN and TLS setup
+﻿# Auto-Track POS â€” LAN and TLS setup
 
 This guide describes the intended shop-LAN deployment. It is **deferred** while the
 user focuses on the self-hosted local website on `127.0.0.1`. The current implementation
@@ -8,8 +8,8 @@ verified, so treat this as a setup procedure, not completed acceptance evidence.
 
 ## Network rules
 
-- PostgreSQL listens on `127.0.0.1:5433` only.
-- The browser uses the Express API only; never expose PostgreSQL to the LAN.
+- MySQL listens on `127.0.0.1:3307` only.
+- The browser uses the Express API only; never expose MySQL to the LAN.
 - Serve the POS over HTTPS on the LAN.
 - Do not port-forward, tunnel, or expose the POS to the public internet.
 - Keep the shop router isolated from guest/public networks where possible.
@@ -55,8 +55,8 @@ ALLOW_SETUP=false
 Keep the database URLs pointed at loopback:
 
 ```dotenv
-DATABASE_URL=postgres://autotrack_app:...@127.0.0.1:5433/autotrack_dev
-MIGRATION_DATABASE_URL=postgres://autotrack_owner:...@127.0.0.1:5433/autotrack_dev
+DATABASE_URL=mysql://autotrack_app:...@127.0.0.1:3307/autotrack_local
+MIGRATION_DATABASE_URL=mysql://autotrack_migrator:...@127.0.0.1:3307/autotrack_local
 ```
 
 If an HTTPS reverse proxy is used instead, set `TRUST_PROXY=true` only when the proxy is
@@ -90,7 +90,7 @@ New-NetFirewallRule -DisplayName "Auto-Track POS HTTPS" `
   -RemoteAddress 192.168.1.0/24 -Action Allow
 ```
 
-Do not create an inbound rule for `5433`. Verify:
+Do not create an inbound rule for `3307`. Verify:
 
 ```powershell
 Get-NetFirewallRule -DisplayName "Auto-Track POS HTTPS"
@@ -108,9 +108,9 @@ On a second shop machine:
 4. Sign in as a cashier and complete a sale.
 5. Sign in as an administrator on another machine and confirm the sale, stock movement,
    and report appear.
-6. Confirm one machine cannot open the PostgreSQL port:
+6. Confirm one machine cannot open the MySQL port:
    ```powershell
-   Test-NetConnection 192.168.1.20 -Port 5433
+   Test-NetConnection 192.168.1.20 -Port 3307
    ```
    `TcpTestSucceeded` must be `False`.
 

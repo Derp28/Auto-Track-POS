@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { once } from 'node:events';
-import pg from 'pg';
 
 // Load .env before the server config module is imported.
 const envPath = path.resolve('.env');
@@ -41,24 +40,36 @@ process.env.COOKIE_SECURE = 'false';
 
 const { runMigrations } = await import('../server/db/migrate.js');
 const { createApp } = await import('../server/app.js');
-const { pool } = await import('../server/db.js');
+const { pool, createPool } = await import('../server/db.js');
 
-const { Pool } = pg;
+const RESET_TABLES = [
+  'idempotency_keys', 'audit_log', 'stock_movements', 'refunds', 'sale_voids',
+  'sale_return_items', 'sale_returns', 'sale_payments', 'sale_items', 'sales',
+  'po_receipt_items', 'po_receipts', 'purchase_order_items', 'purchase_orders',
+  'products', 'suppliers', 'categories', 'sessions', 'users', 'document_sequences', 'settings',
+];
 
-const RESET_SQL = `
-TRUNCATE TABLE idempotency_keys, audit_log, stock_movements, refunds, sale_voids,
-  sale_return_items, sale_returns, sale_payments, sale_items, sales,
-  po_receipt_items, po_receipts, purchase_order_items, purchase_orders,
-  products, suppliers, categories, sessions, users, document_sequences, settings
-  RESTART IDENTITY CASCADE;
-INSERT INTO settings (id, shop_name, currency, timezone, receipt_header, receipt_footer, returns_policy)
-VALUES (1, 'Auto-Track', 'PHP', 'Asia/Manila', 'Auto-Track Auto Supply & Service', 'Thank you.', 'Returns with receipt.');
-`;
+async function resetDatabase(owner) {
+  const connection = await owner.getConnection();
+  try {
+    await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+    for (const table of RESET_TABLES) {
+      await connection.query(`TRUNCATE TABLE \`${table}\``);
+    }
+    await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+    await connection.query(
+      `INSERT INTO settings (id, shop_name, currency, timezone, receipt_header, receipt_footer, returns_policy)
+       VALUES (1, 'Auto-Track', 'PHP', 'Asia/Manila', 'Auto-Track Auto Supply & Service', 'Thank you.', 'Returns with receipt.')`,
+    );
+  } finally {
+    connection.release();
+  }
+}
 
 export async function startTestServer() {
   await runMigrations({ connectionString: process.env.TEST_MIGRATION_DATABASE_URL, log: () => {} });
-  const owner = new Pool({ connectionString: process.env.TEST_MIGRATION_DATABASE_URL, max: 2 });
-  await owner.query(RESET_SQL);
+  const owner = createPool(process.env.TEST_MIGRATION_DATABASE_URL, { max: 2 });
+  await resetDatabase(owner);
   const app = createApp();
   const server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -68,7 +79,7 @@ export async function startTestServer() {
     base,
     owner,
     async reset() {
-      await owner.query(RESET_SQL);
+      await resetDatabase(owner);
     },
     async close() {
       await new Promise((resolve) => server.close(resolve));

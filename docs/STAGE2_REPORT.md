@@ -1,8 +1,9 @@
-# Auto-Track POS — Stage 2 report
+# Auto-Track POS - Stage 2 report (local MySQL edition)
 
-**Date:** 2026-10-21
+**Date:** 2026-11-01
 **Status:** Stage 2 backend and UI implementation complete. **GATE-2 passed.**
-**Current focus:** self-hosted local website with PostgreSQL on the same machine.
+**Variant:** local-only MySQL 8.4 LTS port on the `local-mysql` branch.
+**Current focus:** self-hosted local website with MySQL on the same machine.
 **GATE-3:** Deferred by user direction (LAN deployment, production recovery, and independent
 signoff). Not passed. Not production-ready.
 
@@ -12,13 +13,17 @@ production readiness, and no unrun test is presented as passing.
 ## 1. Scope delivered
 
 The Stage 1 layout, navigation, role visibility, and visual system were preserved while
-the mock data source was replaced with an Express 5 API and PostgreSQL 17.11 database.
+the data layer moved from PostgreSQL 17 to MySQL 8.4 LTS. The API contract, money and
+inventory rules, permission matrix, and UI behavior are unchanged.
 
 ### Platform
 
-- Node.js 24 + Express 5 + `pg`; vanilla ES modules on the frontend.
-- PostgreSQL on loopback port `5433`; runtime and migration roles separated.
-- Versioned migrations `001_core`, `002_immutability`, and `003_least_privilege`.
+- Node.js 24 + Express 5 + `mysql2/promise`; vanilla ES modules on the frontend.
+- MySQL 8.4 LTS on loopback port `3307`; runtime and migration roles separated.
+- Versioned migrations `migrations-mysql/001_core.sql`, `002_immutability.sql`, and
+  `003_least_privilege.sql`.
+- Narrow PostgreSQL compatibility layer in `server/db.js`: `$n` placeholders,
+  `ANY(array)` expansion, common casts, `ILIKE`, `now()`, `to_char`, and `RETURNING *`.
 - Integer-cent money, basis-point percentages, `stock_value_cents` as valuation authority,
   and derived weighted-average cost.
 - Server-side sessions, scrypt password hashing, CSRF tokens, HttpOnly/SameSite cookies,
@@ -27,12 +32,14 @@ the mock data source was replaced with an Express 5 API and PostgreSQL 17.11 dat
   idempotency keys, payload hashes, and no negative stock.
 - TLS support; non-loopback plain HTTP is refused unless explicitly allowed for testing.
 - Structured logs, security headers, CSP, JSON/session limits, and error hygiene.
+- First-run PowerShell launcher with per-user desktop-shortcut and Windows-sign-in
+  auto-start options.
 
 ### Shop features
 
 | Area | Implemented |
 |---|---|
-| First-run setup | Bootstrap-token administrator creation; setup locking |
+| First-run setup | Bootstrap-token administrator creation; setup locking; shortcut/auto-start dialog |
 | Authentication | Login/logout, session restore, idle/absolute expiry, forced password change |
 | Roles | Fixed ADMIN/CASHIER matrix enforced by the API; cashier scope limited to own sales |
 | Dashboard | Live totals, recent sales, low stock, role-scoped visibility |
@@ -63,54 +70,39 @@ the mock data source was replaced with an Express 5 API and PostgreSQL 17.11 dat
 
 ## 2. Verification evidence
 
-Environment: Windows workspace over UNC, Node 24, portable PostgreSQL 17.11 on
-`127.0.0.1:5433`, isolated `autotrack_test` database, headless Microsoft Edge through
+Environment: Windows 11, Node 24, portable MySQL 8.4.13 on `127.0.0.1:3307`,
+isolated `autotrack_test_mysql` database, headless Microsoft Edge through
 `playwright-core`.
 
 | Check | Command | Result |
 |---|---|---|
 | Full backend/browser suite | `node --test --test-concurrency=1 "tests/*.test.mjs"` | **84 tests, 84 pass, 0 fail, 0 skipped** |
-| Browser E2E | `node --test --test-concurrency=1 tests/browser.test.mjs` | **5/5 subtests pass** |
-| Local website workflow | `node --test --test-concurrency=1 tests/workflows.test.mjs` | **9/9 subtests pass** |
-| Static UI boundary | `node scripts/check-ui.mjs` | **279 checks pass** |
+| Static UI boundary | `node scripts/check-ui.mjs` | **285 checks pass** |
 | Client logic | `node scripts/test-ui.mjs` | **45 checks pass** |
-| Dependency audit | `npm audit --audit-level=high` | **0 vulnerabilities** |
-| Live dev smoke | `http://127.0.0.1:3100` | Login, bootstrap, dashboard, daily reports, system status returned live dev data |
-| Dev backup | `node scripts/backup.mjs --output ...` | 109,535-byte custom dump; SHA-256 `587d0a47a780a32fcc02fa121fe1fd7038685c2929ce0a6275fa4538e2a6bb0a`; 3 migrations in manifest |
+| Isolated backup | `node scripts/backup.mjs --database-url ... --output ...` | SQL dump with tables, triggers, function, SHA-256 file, and JSON manifest |
+| Isolated restore | `node scripts/restore.mjs --file ... --target ... --app-url ...` | 22 tables, 3 migrations, shop `Auto-Track`, app role readable, audit delete denied |
 | TLS deployment test | `tests/deployment.test.mjs` | HTTPS on `0.0.0.0`; non-loopback HTTP refused |
-| Isolated restore test | `tests/deployment.test.mjs` | Restore, grants, audit history, app-role access verified on `autotrack_test` |
+| Restart persistence test | `tests/deployment.test.mjs` | Session and category survive a server restart |
+| First-run launcher | `scripts/first-run.ps1`, `scripts/launch.ps1` | PowerShell parser clean; background launch started MySQL and Express and `/api/health` returned `ok` |
 
-### Browser test coverage
+The full suite includes the browser and local-workflow tests. They wait on real API
+responses and assert the same role and UI boundaries as the PostgreSQL baseline.
+
+### Browser and workflow coverage
 
 - First-run setup creates the administrator and opens the dashboard.
 - Administrator can open every primary screen without a page error.
 - Catalog search and category entry point render live data.
 - Reports load daily sales and switch to valuation.
-- System status shows the three applied migrations.
+- System status shows the applied MySQL migrations.
 - Cashier login forces a new password.
 - Cashier completes a checkout and receives a confirmed receipt.
 - Cashier is denied administrator screens.
 - Cashier returns an item with administrator credentials; dialog focus is verified.
-- 1024×768 dashboard, checkout, and reports have no page-level horizontal overflow.
-
-### Local website workflow coverage
-
-`tests/workflows.test.mjs` signs in through the website and exercises the normal shop
-forms end to end against the isolated database:
-
-- Create a category and product, then edit the product price.
-- Post an inventory adjustment and verify on-hand and stock value.
-- Create a supplier.
-- Create a purchase order, mark it ordered, receive one unit, verify partial status,
-  receive the remaining two, and verify full status and stock.
-- Save settings, reload the settings page, and verify the value persisted.
-- Create a cashier and verify the returned temporary password works.
-- Void a sale as administrator, verify the audit record, and verify stock restoration.
-
-This pass found and fixed a dialog lifecycle defect: when one dialog closed and another
-opened immediately (for example, the one-time temporary-password dialog after user
-creation), the queued close event could remove the new dialog's click handler. Dialog
-generations now prevent a prior close event from settling a newly opened dialog.
+- 1024x768 dashboard, checkout, and reports have no page-level horizontal overflow.
+- `tests/workflows.test.mjs` signs in through the website and creates a category,
+  product, inventory adjustment, supplier, purchase order and receipt, settings value,
+  cashier, and void, verifying server state after each mutation.
 
 ### API/database test coverage
 
@@ -118,12 +110,24 @@ The suite includes auth/lockout/session revocation, role and report scoping, inv
 CRUD, totals, tax/discount/refund arithmetic, idempotency conflicts, duplicate submission,
 last-unit concurrency, receiving concurrency, negative-stock rejection, returns/voids,
 audit retention, database constraint/immutability checks, environment validation, restart
-persistence, TLS refusal, and backup/restore.
+persistence, TLS refusal, and MySQL backup/restore.
+
+### Port-specific fixes verified by the suite
+
+- `= ANY($n::bigint[])` is expanded to MySQL `IN (...)` without leaving the equality
+  operator.
+- Duplicate idempotency submissions are detected with `INSERT IGNORE` affected-row count,
+  so a replay returns the stored response instead of surfacing a duplicate-key error.
+- Session expiry uses `TIMESTAMPDIFF` and `DATE_ADD(... INTERVAL ? MINUTE)`.
+- Document numbers use `INSERT ... ON DUPLICATE KEY UPDATE` plus a same-transaction read.
+- Test-only triggers use MySQL `SIGNAL SQLSTATE '45000'`.
+- Backup/restore use `mysqldump` and the `mysql` client, then reapply least-privilege
+  grants.
 
 ## 3. Security controls verified
 
 - Runtime role cannot delete audit history or bypass append-only triggers.
-- PostgreSQL listens on loopback; the browser never receives database credentials.
+- MySQL listens on loopback; the browser never receives database credentials.
 - Mutations require same-origin checks plus `x-csrf-token`.
 - Sessions are server-side and revoked on deactivation/reset.
 - Cashier over-limit discounts, returns, and voids require an active administrator's
@@ -132,6 +136,7 @@ persistence, TLS refusal, and backup/restore.
 - Security headers, CSP, JSON body limit, login rate limit/lockout, and generic API errors
   are implemented and tested.
 - Production non-loopback serving requires TLS unless the explicit test-only override is set.
+- The first-run shortcuts contain no database password or bootstrap token.
 
 ## 4. Gaps and limitations
 
@@ -143,15 +148,19 @@ These are not active work while the user focuses on the local self-hosted websit
    second machine, trusted certificate, static address, or firewall rule has been verified.
 2. **No three-client concurrency pilot on the shop LAN.** Last-unit contention is covered by
    the automated test suite, not by three real clients.
-3. **No production-data restore drill.** Restore is verified only against `autotrack_test`;
-   restore time, production row counts, and post-restore reporting are not recorded.
+3. **No production-data restore drill.** Restore is verified only against
+   `autotrack_test_mysql`; restore time, production row counts, and post-restore reporting
+   are not recorded.
 4. **No independent final audit/signoff.** GATE-2 evidence is self-produced and tested.
    GATE-3 requires the independent signoff package.
 
 ### Operational gaps
 
 - No scheduled backup, retention policy, off-site copy, encryption step, or backup alerting.
-- No Windows service/daemon wrapper, automatic restart, or uptime monitor.
+- No Windows service wrapper or automatic restart. Auto-start is a per-user Startup-folder
+  entry, not a service.
+- MySQL named time zones must be loaded before first use; the development runtime has all
+  597 IANA names. A fresh machine must repeat that step.
 - No screenshots were captured in this pass; browser assertions are textual/runtime evidence.
 - No physical 80 mm printer validation; print depends on browser and OS driver.
 - No full axe/screen-reader accessibility audit. Targeted focus/dialog and viewport checks pass.
@@ -170,10 +179,12 @@ apps are not part of this Stage 2 scope.
 
 - GATE-1: passed.
 - GATE-2: passed.
-- T-201 through T-218: done with evidence.
-- Local self-hosted website workflows: verified on loopback with the isolated test database.
+- T-201 through T-218: done with evidence on PostgreSQL.
+- T-225 MySQL local variant: implementation and full suite verified; branch/publish pending.
+- Local self-hosted website workflows: verified on loopback with the isolated MySQL test
+  database.
 - T-219 LAN pilot: deferred by user direction.
-- T-220 production restore drill: deferred; isolated test restore passed.
+- T-220 production restore drill: deferred; isolated MySQL test restore passed.
 - T-221 final signoff: deferred with GATE-3.
 - GATE-3: deferred and not passed.
 

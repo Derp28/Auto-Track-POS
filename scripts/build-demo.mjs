@@ -7,7 +7,7 @@
  * The demo reuses the approved frontend exactly as shipped in public/. The
  * build copies that frontend, drops the in-browser mock backend next to it,
  * and patches a handful of strings that would otherwise claim this page is
- * talking to PostgreSQL or a shop server. Every patch is asserted, so an
+ * talking to MySQL or a shop server. Every patch is asserted, so an
  * upstream copy change fails the build instead of silently shipping wrong
  * copy.
  *
@@ -100,7 +100,7 @@ await patchFile(path.join(outDir, 'js', 'app.js'), [
 await patchFile(path.join(outDir, 'views', 'login.js'), [
   [
     'login live banner',
-    "setBanner(`Live shop server · ${state.store.meta.dataSource || 'PostgreSQL'} · ${state.store.meta.businessDate || 'connected'}`);",
+    "setBanner(`Live shop server · ${state.store.meta.dataSource || 'MySQL'} · ${state.store.meta.businessDate || 'connected'}`);",
     "setBanner(`Demo · ${state.store.meta.dataSource || 'sample data'} · ${state.store.meta.businessDate || 'ready'}`);",
   ],
   [
@@ -115,7 +115,7 @@ await patchFile(path.join(outDir, 'views', 'login.js'), [
   ],
   [
     'login stock claim',
-    '<small>Every checkout and receiving record updates inventory in PostgreSQL.</small>',
+    '<small>Every checkout and receiving record updates inventory in MySQL.</small>',
     '<small>Every checkout and receiving record updates the stock ledger.</small>',
   ],
   [
@@ -125,7 +125,7 @@ await patchFile(path.join(outDir, 'views', 'login.js'), [
   ],
   [
     'login info note',
-    '<p><strong>Shop-server access only.</strong> This browser talks to the Express API. It never connects to PostgreSQL directly, and it does not store a database password.</p>',
+    '<p><strong>Shop-server access only.</strong> This browser talks to the Express API. It never connects to MySQL directly, and it does not store a database password.</p>',
     '<p><strong>Demo mode.</strong> This page runs entirely in your browser with sample data. Nothing is saved, and no database or shop server is involved.</p>',
   ],
   [
@@ -135,7 +135,7 @@ await patchFile(path.join(outDir, 'views', 'login.js'), [
   ],
   [
     'login system footer',
-    "<span>${state.setupRequired ? 'First-run setup' : 'PostgreSQL system of record'}</span>",
+    "<span>${state.setupRequired ? 'First-run setup' : 'MySQL system of record'}</span>",
     "<span>${state.setupRequired ? 'First-run setup' : 'Sample data · nothing saved'}</span>",
   ],
 ]);
@@ -169,7 +169,7 @@ await patchFile(path.join(outDir, 'components', 'category-manager.js'), [
 ]);
 
 await patchFile(path.join(outDir, 'views', 'settings.js'), [
-  ['settings footer', 'Saved to PostgreSQL · administrator only', 'Saved to demo fixtures · administrator only'],
+  ['settings footer', 'Saved to MySQL · administrator only', 'Saved to demo fixtures · administrator only'],
   ['settings refresh toast', 'Settings reloaded from the shop server.', 'Settings reloaded from the demo shop.'],
 ]);
 
@@ -207,13 +207,13 @@ await patchFile(path.join(outDir, 'views', 'system.js'), [
   [
     'system warning callout',
     '<strong>Verify operations before production use.</strong> Backups are available through <code>scripts/backup.mjs</code>, but no backup schedule, off-site copy, restore drill, firewall review, or production deployment has been verified from this screen.',
-    '<strong>Demo only.</strong> This page reports the sample shop held in this tab. The real application ships a PostgreSQL-backed server, backup scripts, and deployment checks; none of them are running here.',
+    '<strong>Demo only.</strong> This page reports the sample shop held in this tab. The real application ships a MySQL-backed server, backup scripts, and deployment checks; none of them are running here.',
   ],
   ['system app hint', 'hint: `Node ${status.app.node} · ${status.app.environment}`', 'hint: `Demo · ${status.app.environment}`'],
   ['system runtime heading', 'What is running for this shop server.', 'What is running in this tab.'],
   ['system web server label', '<dt>Web server</dt>', '<dt>Page runtime</dt>'],
   ['system web server badge', 'Express API + static UI', 'Static files + mock API'],
-  ['system database label', '<dt>PostgreSQL</dt>', '<dt>Database</dt>'],
+  ['system database label', '<dt>MySQL</dt>', '<dt>Database</dt>'],
   ['system database badge', "badge('Connected', 'success')", "badge('None', 'warning')"],
   [
     'system database detail',
@@ -226,7 +226,7 @@ await patchFile(path.join(outDir, 'views', 'system.js'), [
     'ADMIN and CASHIER roles enforced by the API',
     'ADMIN and CASHIER role rules enforced by the mock API',
   ],
-  ['system inventory badge', "badge('PostgreSQL', 'success')", "badge('In-memory ledger', 'warning')"],
+  ['system inventory badge', "badge('MySQL', 'success')", "badge('In-memory ledger', 'warning')"],
   [
     'system inventory detail',
     'Stock value and movement ledger are server-side',
@@ -265,10 +265,10 @@ await patchFile(path.join(outDir, 'views', 'system.js'), [
   ],
   [
     'system config heading',
-    'Current shop settings from PostgreSQL.',
+    'Current shop settings from MySQL.',
     'Current shop settings from the demo fixtures.',
   ],
-  ['system data source', '<strong>PostgreSQL via Express API</strong>', '<strong>Sample fixtures in your browser</strong>'],
+  ['system data source', '<strong>MySQL via Express API</strong>', '<strong>Sample fixtures in your browser</strong>'],
   [
     'system limits heading',
     'Known gaps that require action before production.',
@@ -276,8 +276,8 @@ await patchFile(path.join(outDir, 'views', 'system.js'), [
   ],
   [
     'system limits bullet',
-    'PostgreSQL should remain bound to loopback. This screen cannot inspect firewall or network rules.',
-    'The production deployment keeps PostgreSQL bound to loopback and requires TLS for LAN access; neither is part of this demo.',
+    'MySQL should remain bound to loopback. This screen cannot inspect firewall or network rules.',
+    'The production deployment keeps MySQL bound to loopback and requires TLS for LAN access; neither is part of this demo.',
   ],
 ]);
 

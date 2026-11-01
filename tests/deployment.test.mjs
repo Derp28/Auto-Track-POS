@@ -148,7 +148,7 @@ test('a server restart preserves database data and an active session', async () 
     assertStatus(boot, 200, 'bootstrap after restart');
     assert.equal(boot.body.user.username, 'owner');
     assert.ok(boot.body.categories.some((row) => row.id === category.id));
-    assert.equal(boot.body.meta.dataSource, 'PostgreSQL via Express API');
+    assert.equal(boot.body.meta.dataSource, 'MySQL via Express API');
   } finally {
     await stopServer(child);
   }
@@ -209,11 +209,11 @@ test('backup and restore reproduce the shop, audit history, and least-privilege 
 
   const stamp = Date.now();
   const dumpFile = path.resolve('.tmp', `backup-${stamp}.dump`);
-  const pgBin = process.env.PG_BIN;
+  const mysqlBin = process.env.MYSQL_BIN;
   const backup = await runScript('scripts/backup.mjs', [
     '--database-url', process.env.TEST_MIGRATION_DATABASE_URL,
     '--output', dumpFile,
-  ], { PG_BIN: pgBin });
+  ], { MYSQL_BIN: mysqlBin });
   assert.equal(backup.status, 0, backup.stderr);
   const summary = JSON.parse(backup.stdout);
   assert.equal(summary.ok, true);
@@ -232,7 +232,7 @@ test('backup and restore reproduce the shop, audit history, and least-privilege 
     '--file', dumpFile,
     '--target', process.env.TEST_MIGRATION_DATABASE_URL,
     '--app-url', process.env.TEST_DATABASE_URL,
-  ], { PG_BIN: pgBin });
+  ], { MYSQL_BIN: mysqlBin });
   assert.equal(restore.status, 0, restore.stderr);
   const restored = JSON.parse(restore.stdout);
   assert.equal(restored.ok, true);

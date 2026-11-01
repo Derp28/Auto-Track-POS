@@ -10,7 +10,7 @@ const EMPTY_META = {
   businessDate: '',
   defaultTerminal: 'Counter 1',
   appVersion: '',
-  dataSource: 'PostgreSQL via Express API',
+  dataSource: 'MySQL via Express API',
   stageLabel: 'Stage 2 — live shop server',
 };
 

@@ -1,5 +1,5 @@
 /**
- * Browser API client. The frontend never touches PostgreSQL directly.
+ * Browser API client. The frontend never touches MySQL directly.
  * All mutations include the per-session CSRF token; failures throw ApiError.
  */
 let csrfToken = '';

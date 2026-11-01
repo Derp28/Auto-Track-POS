@@ -22,12 +22,14 @@ import { getSettings } from './settings.js';
 const MAX_TENDERED = 1_000_000_000_000;
 
 async function nextDocumentNumber(client, docType, businessDate, prefix) {
-  const { rows } = await client.query(
+  await client.query(
     `INSERT INTO document_sequences (doc_type, business_date, next_value)
      VALUES ($1, $2, 1)
-     ON CONFLICT (doc_type, business_date)
-     DO UPDATE SET next_value = document_sequences.next_value + 1
-     RETURNING next_value`,
+     ON DUPLICATE KEY UPDATE next_value = next_value + 1`,
+    [docType, businessDate],
+  );
+  const { rows } = await client.query(
+    'SELECT next_value FROM document_sequences WHERE doc_type = $1 AND business_date = $2',
     [docType, businessDate],
   );
   const sequence = rows[0].next_value;
@@ -433,7 +435,7 @@ export async function listSales({
        WHERE ($1::date IS NULL OR s.business_date >= $1)
          AND ($2::date IS NULL OR s.business_date <= $2)
          AND ($3::bigint IS NULL OR s.cashier_id = $3)
-         AND ($4::text = '' OR s.number ILIKE '%' || $4 || '%' OR s.cashier_name ILIKE '%' || $4 || '%')
+         AND ($4::text = '' OR s.number LIKE CONCAT('%', $4, '%') OR s.cashier_name LIKE CONCAT('%', $4, '%'))
      )
      SELECT *, CASE
          WHEN status = 'VOIDED' THEN 'VOIDED'

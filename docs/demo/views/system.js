@@ -16,7 +16,7 @@ export async function renderSystem(ctx) {
         description: 'Runtime information for this in-browser demo. Nothing here is a real server, database, or deployment.',
         actions: badge('Browser demo running', 'success'),
       })}
-      <div class="callout callout--warning">${icon('alert', 18)} <span><strong>Demo only.</strong> This page reports the sample shop held in this tab. The real application ships a PostgreSQL-backed server, backup scripts, and deployment checks; none of them are running here.</span></div>
+      <div class="callout callout--warning">${icon('alert', 18)} <span><strong>Demo only.</strong> This page reports the sample shop held in this tab. The real application ships a MySQL-backed server, backup scripts, and deployment checks; none of them are running here.</span></div>
       <section class="stat-grid stat-grid--four" aria-label="System status">
         ${statCard({ label: 'Application', value: status.app.version, hint: `Demo · ${status.app.environment}`, tone: 'success', iconName: 'system' })}
         ${statCard({ label: 'Products / sales', value: `${counts.products} / ${counts.sales}`, hint: `${counts.stock_movements} stock movements`, iconName: 'box' })}
@@ -59,7 +59,7 @@ export async function renderSystem(ctx) {
           <div class="card__head"><div><h2>Operational limits</h2><p>Known gaps in the production system, not in this demo.</p></div>${badge('Review required', 'warning')}</div>
           <ul class="rule-list">
             <li>Non-loopback access requires TLS. HTTP on a non-loopback host is refused unless the test-only override is set.</li>
-            <li>The production deployment keeps PostgreSQL bound to loopback and requires TLS for LAN access; neither is part of this demo.</li>
+            <li>The production deployment keeps MySQL bound to loopback and requires TLS for LAN access; neither is part of this demo.</li>
             <li>No automated backup schedule, off-site retention, or production restore drill is configured.</li>
             <li>No card payment integration is present. External terminal references are optional and manually entered.</li>
             <li>Browser printing depends on the operating system and printer configuration.</li>

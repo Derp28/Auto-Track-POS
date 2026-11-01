@@ -4,9 +4,9 @@ import { config, projectRoot } from '../config.js';
 
 export async function systemStatus() {
   const [db, counts, migrations, settings, businessDate] = await Promise.all([
-    query(`SELECT version() AS version, current_database() AS database,
-                  (SELECT setting FROM pg_settings WHERE name = 'server_version') AS server_version,
-                  pg_postmaster_start_time() AS started_at`),
+    query(`SELECT VERSION() AS version, DATABASE() AS \`database\`,
+                  VERSION() AS server_version,
+                  UTC_TIMESTAMP(6) AS started_at`),
     query(`SELECT
       (SELECT count(*)::int FROM products) AS products,
       (SELECT count(*)::int FROM sales) AS sales,
@@ -35,7 +35,7 @@ export async function systemStatus() {
     },
     database: {
       version: db.rows[0].server_version,
-      postgres: db.rows[0].version.split(',')[0],
+      mysql: db.rows[0].version.split(',')[0],
       name: db.rows[0].database,
       startedAt: new Date(db.rows[0].started_at).toISOString(),
       migrations: migrations.rows.map((row) => ({ version: row.version, appliedAt: new Date(row.applied_at).toISOString() })),

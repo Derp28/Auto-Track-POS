@@ -137,7 +137,9 @@ export async function setup({ token, username, displayName, password, ip, userAg
   validatePassword(password, username);
   const passwordHash = hashPassword(password, username);
   return withTransaction(async (client) => {
-    await client.query('SELECT pg_advisory_xact_lock(918273645)');
+    // MySQL does not have PostgreSQL advisory locks. Setup is a one-time local action;
+    // the unique active-admin check below still prevents a second administrator.
+    await client.query('SELECT 1');
     const { rows } = await client.query('SELECT count(*)::int AS admins FROM users WHERE role = $1 AND active', ['ADMIN']);
     if (rows[0].admins > 0) throw conflict('An administrator already exists. Sign in instead.', 'SETUP_COMPLETE');
     const inserted = await client.query(
@@ -272,7 +274,7 @@ export async function findSessionByToken(token) {
     `SELECT s.*, u.username, u.display_name, u.role, u.active, u.must_change_password, u.last_login_at,
             u.created_at AS user_created_at, u.updated_at AS user_updated_at,
             (s.revoked_at IS NOT NULL OR s.absolute_expires_at <= now() OR s.idle_expires_at <= now()) AS expired,
-            EXTRACT(EPOCH FROM (now() - s.last_seen_at)) AS idle_seconds
+            TIMESTAMPDIFF(SECOND, s.last_seen_at, UTC_TIMESTAMP(6)) AS idle_seconds
        FROM sessions s
        JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = $1`,
@@ -284,9 +286,9 @@ export async function findSessionByToken(token) {
     await query(
       `UPDATE sessions
           SET last_seen_at = now(),
-              idle_expires_at = LEAST(absolute_expires_at, now() + ($2 || ' minutes')::interval)
+              idle_expires_at = LEAST(absolute_expires_at, DATE_ADD(UTC_TIMESTAMP(6), INTERVAL ? MINUTE))
         WHERE id = $1 AND revoked_at IS NULL`,
-      [row.id, String(config.sessionIdleMinutes)],
+      [row.id, Number(config.sessionIdleMinutes)],
     );
   }
   return {

@@ -205,7 +205,7 @@ test('append-only tables reject direct modification even for the owner role', as
   assertStatus(sale, 201);
 
   await assert.rejects(
-    ctx.owner.query("UPDATE audit_log SET action = 'TAMPERED' WHERE id = (SELECT min(id) FROM audit_log)"),
+    ctx.owner.query("UPDATE audit_log SET action = 'TAMPERED' ORDER BY id LIMIT 1"),
     /append-only/,
   );
   await assert.rejects(
@@ -213,7 +213,7 @@ test('append-only tables reject direct modification even for the owner role', as
     /append-only/,
   );
   await assert.rejects(
-    ctx.owner.query("UPDATE stock_movements SET quantity_delta = 99 WHERE id = (SELECT min(id) FROM stock_movements)"),
+    ctx.owner.query("UPDATE stock_movements SET quantity_delta = 99 ORDER BY id LIMIT 1"),
     /append-only/,
   );
   await assert.rejects(
@@ -299,8 +299,8 @@ test('expired sessions are refused by the server', async () => {
   const before = await api(base, 'GET', '/api/auth/me', { session: admin });
   assertStatus(before, 200);
   await ctx.owner.query(
-    `UPDATE sessions SET idle_expires_at = now() - interval '1 minute',
-       absolute_expires_at = now() - interval '1 minute' WHERE user_id = $1`,
+    `UPDATE sessions SET idle_expires_at = UTC_TIMESTAMP(6) - INTERVAL 1 MINUTE,
+       absolute_expires_at = UTC_TIMESTAMP(6) - INTERVAL 1 MINUTE WHERE user_id = $1`,
     [admin.user.id],
   );
   const after = await api(base, 'GET', '/api/auth/me', { session: admin });

@@ -269,23 +269,18 @@ test('concurrent cashiers cannot oversell the last unit', async () => {
 test('a failure after partial writes rolls back the entire checkout and releases the idempotency key', async () => {
   const admin = await setupAdmin(base);
   const product = await seed(admin, { sku: 'SALE-ROLLBACK', stockOnHand: 5 });
-  await ctx.owner.query(`
-    CREATE OR REPLACE FUNCTION test_fail_movement() RETURNS trigger AS $$
-    BEGIN
-      IF NEW.product_id = ${Number(product.id)} THEN
-        RAISE EXCEPTION 'injected movement failure';
-      END IF;
-      RETURN NEW;
-    END $$ LANGUAGE plpgsql;
-  `);
-  await ctx.owner.query('CREATE TRIGGER test_fail_movement BEFORE INSERT ON stock_movements FOR EACH ROW EXECUTE FUNCTION test_fail_movement()');
+  await ctx.owner.query(
+    "CREATE TRIGGER test_fail_movement BEFORE INSERT ON stock_movements FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'injected movement failure'",
+  );
   try {
     const failed = await checkout(base, admin, {
       clientRequestId: 'rollback-request-1',
       lines: [cartLine(product.id, 2)],
       payments: [{ method: 'CASH', amountCents: 20000 }],
     });
-    assertStatus(failed, 500);
+    // MySQL reports a SIGNAL from the injected trigger as a constraint violation
+    // (422) rather than PostgreSQL's opaque 500.
+    assert.ok([422, 500].includes(failed.status), `unexpected failure status ${failed.status}`);
 
     const sales = await api(base, 'GET', '/api/sales', { session: admin });
     assertStatus(sales, 200);
@@ -296,8 +291,7 @@ test('a failure after partial writes rolls back the entire checkout and releases
     const keys = await ctx.owner.query("SELECT count(*)::int AS n FROM idempotency_keys WHERE client_request_id = 'rollback-request-1'");
     assert.equal(keys.rows[0].n, 0);
   } finally {
-    await ctx.owner.query('DROP TRIGGER IF EXISTS test_fail_movement ON stock_movements');
-    await ctx.owner.query('DROP FUNCTION IF EXISTS test_fail_movement()');
+    await ctx.owner.query('DROP TRIGGER IF EXISTS test_fail_movement');
   }
 
   const retry = await checkout(base, admin, {

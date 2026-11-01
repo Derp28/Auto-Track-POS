@@ -105,8 +105,8 @@ bootstrapRouter.get('/bootstrap', requireAuth, asyncHandler(async (req, res) => 
       clockIso: new Date().toISOString(),
       businessDate,
       defaultTerminal: 'Counter 1',
-      appVersion: '1.0.0',
-      dataSource: 'PostgreSQL via Express API',
+      appVersion: '1.0.1',
+      dataSource: 'MySQL via Express API',
       stageLabel: 'Stage 2 — live shop server',
     },
   });
