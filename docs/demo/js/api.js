@@ -95,6 +95,82 @@ export const api = {
   delete: (path, options) => request('DELETE', path, undefined, options),
 };
 
+function safeDownloadName(value, fallback) {
+  const candidate = String(value || '')
+    .replace(/[\r\n"]/g, '')
+    .replace(/[\\/]/g, '_')
+    .trim();
+  return candidate || fallback;
+}
+
+function filenameFromDisposition(value, fallback) {
+  if (!value) return fallback;
+  const encoded = value.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (encoded) {
+    try {
+      return safeDownloadName(decodeURIComponent(encoded[1]), fallback);
+    } catch {
+      return safeDownloadName(encoded[1], fallback);
+    }
+  }
+  const plain = value.match(/filename\s*=\s*"([^"]+)"/i) || value.match(/filename\s*=\s*([^;]+)/i);
+  return safeDownloadName(plain?.[1], fallback);
+}
+
+/**
+ * Download a server-generated file without putting file contents through the
+ * JSON API client. The response is still the Express API; the browser never
+ * talks to MySQL.
+ */
+export async function downloadFile(path, { fallbackName = 'autotrack-export' } = {}) {
+  let response;
+  try {
+    response = await fetch(path, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+      },
+    });
+  } catch {
+    throw new ApiError('The shop server could not be reached. Check the network and try again.', {
+      code: 'NETWORK_ERROR',
+    });
+  }
+
+  if (!response.ok) {
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+    if (response.status === 401) unauthorizedHandler?.();
+    throw new ApiError(payload?.error?.message || `The export was refused (${response.status}).`, {
+      status: response.status,
+      code: payload?.error?.code || 'HTTP_ERROR',
+      fields: payload?.error?.fields || null,
+    });
+  }
+
+  const blob = await response.blob();
+  const filename = filenameFromDisposition(
+    response.headers.get('content-disposition'),
+    fallbackName,
+  );
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  anchor.rel = 'noopener';
+  anchor.style.display = 'none';
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  return filename;
+}
+
 export async function setupStatus() {
   return api.get('/api/auth/setup-status');
 }

@@ -43,6 +43,8 @@ const SETTINGS = {
   maxLineQuantity: 999,
   allowNegativeStock: false,
   lowStockOnlyActive: true,
+  monthlySalesTargetCents: 5000000,
+  salesComparisonMode: 'monthly',
   updatedAt: new Date(Date.now() - 30 * DAY).toISOString(),
 };
 
@@ -152,6 +154,16 @@ export function createDemoShop(now = new Date()) {
   const todayAt = (fraction) => new Date(todayStart.getTime() + Math.round(elapsed * fraction));
   const yesterdayAt = (hours, minutes = 0) => atTime(new Date(todayStart.getTime() - DAY), hours, minutes);
   const daysAgo = (days, hours, minutes = 0) => atTime(new Date(todayStart.getTime() - days * DAY), hours, minutes);
+  const previousMonthAt = (hours, minutes = 0) => atTime(new Date(
+    now.getFullYear(),
+    now.getMonth() - 1,
+    Math.min(now.getDate(), 6),
+  ), hours, minutes);
+  const previousYearAt = (hours, minutes = 0) => atTime(new Date(
+    now.getFullYear() - 1,
+    now.getMonth(),
+    Math.min(now.getDate(), 6),
+  ), hours, minutes);
 
   const shop = createShop({
     settings: SETTINGS,
@@ -160,7 +172,7 @@ export function createDemoShop(now = new Date()) {
   });
   const { state } = shop;
 
-  const openAt = daysAgo(4, 8, 30);
+  const openAt = daysAgo(500, 8, 30);
   for (const [sku, name, categoryName, costCents, priceCents, openingStock, reorderLevel, barcode, description] of PRODUCTS) {
     const category = state.categories.find((entry) => entry.name === categoryName);
     shop.addProduct(
@@ -311,6 +323,31 @@ export function createDemoShop(now = new Date()) {
 
   const sales = [];
 
+  // Historical sales give the month/year comparisons and trend charts a real
+  // before-and-after instead of a single current-period bar.
+  sales.push(sell({
+    at: previousMonthAt(11, 20),
+    username: 'cashier',
+    lines: [
+      { sku: 'BAT-60AH', qty: 2 },
+      { sku: 'BRK-PAD-FRT', qty: 3 },
+      { sku: 'FLD-ENG-4L', qty: 2 },
+    ],
+    payment: cash,
+    note: 'Previous-month counter sales.',
+  }));
+  sales.push(sell({
+    at: previousYearAt(14, 10),
+    username: 'cashier2',
+    lines: [
+      { sku: 'ENG-TB-KIT', qty: 3 },
+      { sku: 'BAT-60AH', qty: 2 },
+      { sku: 'BRK-PAD-FRT', qty: 3 },
+    ],
+    payment: (total) => card(total, 'TERM-2190'),
+    note: 'Same period last year.',
+  }));
+
   sales.push(sell({
     at: yesterdayAt(9, 10),
     username: 'cashier',
@@ -422,6 +459,30 @@ export function createDemoShop(now = new Date()) {
     actor: admin,
     reason: 'Wrong item keyed at the counter — replaced with the correct part.',
   });
+
+  // Operating expenses. Dates stay inside the current month and never move
+  // into the future when the demo is opened early in the month.
+  const expenseAt = (day) => new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    Math.min(day, now.getDate()),
+    0,
+    5,
+  );
+  for (const expense of [
+    { day: 1, category: 'Rent', description: 'Counter and stockroom rent', amountCents: 1200000, paidVia: 'BANK_TRANSFER' },
+    { day: 3, category: 'Utilities', description: 'Electricity and water', amountCents: 380000, paidVia: 'CASH' },
+    { day: 6, category: 'Supplies', description: 'Receipt paper and counter supplies', amountCents: 125000, paidVia: 'CASH' },
+    { day: 9, category: 'Transport', description: 'Parts pickup from the supplier', amountCents: 65000, paidVia: 'CASH' },
+  ]) {
+    shop.createExpense({
+      expenseDate: dateString(expenseAt(expense.day)),
+      category: expense.category,
+      description: expense.description,
+      amountCents: expense.amountCents,
+      paidVia: expense.paidVia,
+    }, admin, expenseAt(expense.day));
+  }
 
   // A stock count correction so the movement ledger shows an adjustment.
   const bulbs = productBySku.get('ELE-H4-12V');

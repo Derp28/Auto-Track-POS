@@ -1,5 +1,5 @@
-import { clearFormErrors, escapeHtml, icon, pageHeader, setFormFieldError } from '../js/ui.js';
-import { formatPercentFromBps } from '../js/money.js';
+import { clearFormErrors, escapeHtml, icon, money, pageHeader, setFormFieldError } from '../js/ui.js';
+import { formatPercentFromBps, parseAmountToCents } from '../js/money.js';
 import { toast } from '../components/toast.js';
 import { rerender } from '../js/router.js';
 
@@ -11,7 +11,7 @@ export function renderSettings(ctx) {
       ${pageHeader({
         eyebrow: 'Administration · configuration',
         title: 'Settings',
-        description: 'Shop identity, tax, checkout rules, and this browser’s terminal label. Shop settings are saved to the server.',
+        description: 'Shop identity, tax, dashboard target, checkout rules, and this browser’s terminal label. Shop settings are saved to the server.',
         actions: `<button class="btn btn--secondary" type="button" data-settings-refresh>${icon('refresh', 16)} Refresh from server</button>`,
       })}
       <div class="callout callout--warning">${icon('alert', 17)} <span>Shop settings apply to every cashier and are recorded in the audit log. The terminal label stays in this browser only.</span></div>
@@ -44,6 +44,29 @@ export function renderSettings(ctx) {
               <div class="field"><label for="settings-timezone">Time zone</label><input id="settings-timezone" name="timezone" maxlength="60" value="${escapeHtml(settings.timezone)}"></div>
               <div class="field"><label for="settings-cutoff">Business-day cutoff</label><input id="settings-cutoff" name="businessDayCutoff" type="time" value="${escapeHtml(settings.businessDayCutoff)}"><small class="field-hint">24-hour shop cutoff for same-day reporting and voids.</small></div>
             </div>
+          </section>
+
+          <section class="card">
+            <div class="card__head"><div><h2>Dashboard target &amp; comparison</h2><p>Administrator-only sales insights. Cashiers keep their own daily summary.</p></div>${icon('chart', 20)}</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="settings-sales-target">Monthly sales target</label>
+                <div class="input-suffix">
+                  <input id="settings-sales-target" name="monthlySalesTarget" type="number" min="0" step="0.01" value="${(Number(settings.monthlySalesTargetCents || 0) / 100).toFixed(2)}">
+                  <span>PHP</span>
+                </div>
+                <small class="field-hint">Net sales excluding tax, after refunds. Set 0 for no target.</small>
+              </div>
+              <div class="field">
+                <label for="settings-comparison-mode">Comparison graph</label>
+                <select id="settings-comparison-mode" name="salesComparisonMode">
+                  <option value="monthly" ${settings.salesComparisonMode !== 'yearly' ? 'selected' : ''}>Monthly — last 6 months</option>
+                  <option value="yearly" ${settings.salesComparisonMode === 'yearly' ? 'selected' : ''}>Yearly — last 5 years</option>
+                </select>
+                <small class="field-hint">Monthly is the default. The same choice drives the comparison badge and trend chart.</small>
+              </div>
+            </div>
+            <div class="callout callout--muted">${icon('info', 16)} <span>The dashboard compares the current month-to-date against the same days last month, or year-to-date against the same period last year.</span></div>
           </section>
 
           <section class="card">
@@ -81,6 +104,8 @@ export function renderSettings(ctx) {
               <div><span>Tax</span><strong>${settings.taxEnabled ? formatPercentFromBps(settings.taxRateBps) : 'Disabled'}</strong></div>
               <div><span>Cashier limit</span><strong>${formatPercentFromBps(settings.cashierDiscountLimitBps)}</strong></div>
               <div><span>Max line</span><strong>${settings.maxLineQuantity}</strong></div>
+              <div><span>Monthly target</span><strong>${settings.monthlySalesTargetCents ? money(settings.monthlySalesTargetCents) : 'Not set'}</strong></div>
+              <div><span>Comparison</span><strong>${settings.salesComparisonMode === 'yearly' ? 'Yearly' : 'Monthly'}</strong></div>
               <div><span>Terminal</span><strong>${escapeHtml(state.terminalLabel)}</strong></div>
             </div>
             <button class="btn btn--primary btn--block" type="submit">${icon('check', 17)} Save settings</button>
@@ -111,6 +136,9 @@ export function renderSettings(ctx) {
         const taxRatePercent = Number(data.get('taxRatePercent'));
         const cashierLimitPercent = Number(data.get('cashierDiscountLimitPercent'));
         const maxLineQuantity = Number(data.get('maxLineQuantity'));
+        const targetRaw = String(data.get('monthlySalesTarget') || '').trim();
+        const monthlySalesTargetCents = targetRaw ? parseAmountToCents(targetRaw) : 0;
+        const salesComparisonMode = String(data.get('salesComparisonMode') || 'monthly');
         let hasClientError = false;
         if (!Number.isFinite(taxRatePercent) || taxRatePercent < 0 || taxRatePercent > 100) {
           setFormFieldError(form, 'taxRatePercent', 'Enter a tax rate from 0% to 100%.');
@@ -122,6 +150,14 @@ export function renderSettings(ctx) {
         }
         if (!Number.isInteger(maxLineQuantity) || maxLineQuantity < 1 || maxLineQuantity > 9999) {
           setFormFieldError(form, 'maxLineQuantity', 'Enter a whole number from 1 to 9999.');
+          hasClientError = true;
+        }
+        if (monthlySalesTargetCents === null || monthlySalesTargetCents < 0) {
+          setFormFieldError(form, 'monthlySalesTarget', 'Enter a valid amount with at most two decimals.');
+          hasClientError = true;
+        }
+        if (!['monthly', 'yearly'].includes(salesComparisonMode)) {
+          setFormFieldError(form, 'salesComparisonMode', 'Choose monthly or yearly.');
           hasClientError = true;
         }
         const terminalLabel = String(data.get('terminalLabel') || '').trim();
@@ -150,6 +186,8 @@ export function renderSettings(ctx) {
             cashierDiscountLimitBps: Math.round(cashierLimitPercent * 100),
             discountReasonRequired: Boolean(data.get('discountReasonRequired')),
             maxLineQuantity,
+            monthlySalesTargetCents,
+            salesComparisonMode,
           });
           state.setTerminalLabel(terminalLabel);
           document.dispatchEvent(new CustomEvent('pos:terminal-changed'));

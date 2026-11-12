@@ -163,6 +163,24 @@ export function installDemoBackend() {
     if (method === 'GET' && path === '/api/dashboard') {
       return shop.dashboard(currentUser());
     }
+    if (path === '/api/expenses') {
+      const user = requireAdmin();
+      if (method === 'GET') {
+        return shop.listExpenses({
+          from: search.get('from') || null,
+          to: search.get('to') || null,
+          limit: intParam(search, 'limit', 100),
+          includeDeleted: search.get('includeDeleted') === 'true',
+        });
+      }
+      if (method === 'POST') return shop.createExpense(body || {}, user);
+    }
+    const expenseMatch = path.match(/^\/api\/expenses\/([^/]+)$/);
+    if (expenseMatch) {
+      const user = requireAdmin();
+      if (method === 'PUT') return shop.updateExpense(expenseMatch[1], body || {}, user);
+      if (method === 'DELETE') return shop.deleteExpense(expenseMatch[1], user);
+    }
     if (method === 'GET' && path === '/api/system/status') {
       return shop.systemStatus(requireAdmin());
     }

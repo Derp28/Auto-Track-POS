@@ -286,9 +286,9 @@ export async function receivePurchaseOrder(poId, body, actor) {
     const totalCents = computed.reduce((sum, entry) => sum + entry.totalCents, 0);
     const number = await nextDocumentNumber(client, 'GOODS_RECEIPT', businessDate, 'GR');
     const receiptInsert = await client.query(
-      `INSERT INTO po_receipts (number, purchase_order_id, received_by, total_cents, note, client_request_id, payload_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [number, poId, actor.id, totalCents, note, clientRequestId, claim.hash],
+      `INSERT INTO po_receipts (number, purchase_order_id, received_by, total_cents, business_date, note, client_request_id, payload_hash)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [number, poId, actor.id, totalCents, businessDate, note, clientRequestId, claim.hash],
     );
     const receipt = receiptInsert.rows[0];
     const productIds = [...new Set(computed.map((entry) => Number(entry.line.product_id)))].sort((a, b) => a - b);

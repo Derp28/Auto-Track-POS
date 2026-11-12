@@ -73,7 +73,7 @@ function renderChrome(routeInfo) {
       <span class="topbar__shop">${escapeHtml(state.store.settings.shopName)}</span>
       <span class="topbar__slash">/</span>
       <strong>${escapeHtml(title)}</strong>
-      <span class="badge badge--live">${icon('check', 12)} Live</span>
+      <span class="badge badge--muted">${icon('check', 12)} Demo</span>
     </div>
     <div class="topbar__actions">
       <button class="terminal-chip" type="button" data-terminal-edit title="Edit this browser's terminal label">

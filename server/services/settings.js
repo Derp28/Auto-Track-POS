@@ -51,6 +51,11 @@ export async function updateSettings(body, actor) {
   const cashierDiscountLimitBps = integer(input.cashierDiscountLimitBps, 'cashierDiscountLimitBps', { min: 0, max: 10000 });
   const discountReasonRequired = boolean(input.discountReasonRequired, 'discountReasonRequired');
   const maxLineQuantity = integer(input.maxLineQuantity, 'maxLineQuantity', { min: 1, max: 9999 });
+  const monthlySalesTargetCents = integer(input.monthlySalesTargetCents, 'monthlySalesTargetCents', {
+    min: 0,
+    max: 1_000_000_000_000_000,
+  });
+  const salesComparisonMode = oneOf(input.salesComparisonMode, 'salesComparisonMode', ['monthly', 'yearly']);
   if (input.allowNegativeStock === true) {
     throw badRequest('Negative stock is not supported.', 'NEGATIVE_STOCK_FORBIDDEN', { allowNegativeStock: 'Not supported.' });
   }
@@ -62,12 +67,14 @@ export async function updateSettings(body, actor) {
          timezone = $7, business_day_cutoff = $8::time, receipt_header = $9, receipt_footer = $10,
          receipt_width = $11, returns_policy = $12, tax_enabled = $13, tax_rate_bps = $14,
          tax_inclusive = $15, cashier_discount_limit_bps = $16, discount_reason_required = $17,
-         max_line_quantity = $18, updated_at = now(), updated_by = $19
+         max_line_quantity = $18, monthly_sales_target_cents = $19, sales_comparison_mode = $20,
+         updated_at = now(), updated_by = $21
        WHERE id = 1 RETURNING *`,
       [
         shopName, address, phone, emailAddress, tin, currency, timezone, cutoff,
         receiptHeader, receiptFooter, receiptWidth, returnsPolicy, taxEnabled, taxRateBps,
-        taxInclusive, cashierDiscountLimitBps, discountReasonRequired, maxLineQuantity, actor.id,
+        taxInclusive, cashierDiscountLimitBps, discountReasonRequired, maxLineQuantity,
+        monthlySalesTargetCents, salesComparisonMode, actor.id,
       ],
     );
     const changed = Object.keys(settingsDto(rows[0])).filter(
@@ -78,7 +85,14 @@ export async function updateSettings(body, actor) {
       action: 'SETTINGS_UPDATED',
       entityType: 'settings',
       entityId: 1,
-      details: { changed, taxEnabled, taxRateBps, taxInclusive },
+      details: {
+        changed,
+        taxEnabled,
+        taxRateBps,
+        taxInclusive,
+        monthlySalesTargetCents,
+        salesComparisonMode,
+      },
     });
     return settingsDto(rows[0]);
   });

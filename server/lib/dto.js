@@ -42,9 +42,31 @@ export function settingsDto(row) {
     cashierDiscountLimitBps: num(row.cashier_discount_limit_bps),
     discountReasonRequired: row.discount_reason_required,
     maxLineQuantity: num(row.max_line_quantity),
+    monthlySalesTargetCents: num(row.monthly_sales_target_cents),
+    salesComparisonMode: row.sales_comparison_mode || 'monthly',
     allowNegativeStock: false,
     lowStockOnlyActive: true,
     updatedAt: ts(row.updated_at),
+  };
+}
+
+export function expenseDto(row) {
+  return {
+    id: id(row.id),
+    expenseDate: dateString(row.expense_date),
+    category: row.category,
+    description: row.description,
+    amountCents: num(row.amount_cents),
+    paidVia: row.paid_via,
+    createdBy: id(row.created_by),
+    createdByName: row.created_by_name || null,
+    updatedBy: id(row.updated_by),
+    updatedByName: row.updated_by_name || null,
+    createdAt: ts(row.created_at),
+    updatedAt: ts(row.updated_at),
+    deletedBy: id(row.deleted_by),
+    deletedByName: row.deleted_by_name || null,
+    deletedAt: ts(row.deleted_at),
   };
 }
 

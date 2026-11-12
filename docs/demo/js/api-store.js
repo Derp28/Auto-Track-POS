@@ -34,6 +34,8 @@ const DEFAULT_SETTINGS = {
   cashierDiscountLimitBps: 0,
   discountReasonRequired: true,
   maxLineQuantity: 999,
+  monthlySalesTargetCents: 0,
+  salesComparisonMode: 'monthly',
 };
 
 function wacFor(product) {
@@ -360,6 +362,21 @@ export function createApiStore() {
       });
       await store.refreshQuietly();
       return settings;
+    },
+    async createExpense(input) {
+      const expense = await api.post('/api/expenses', input);
+      await store.refreshQuietly();
+      return expense;
+    },
+    async updateExpense(id, input) {
+      const expense = await api.put(`/api/expenses/${encodeURIComponent(id)}`, input);
+      await store.refreshQuietly();
+      return expense;
+    },
+    async deleteExpense(id) {
+      const result = await api.delete(`/api/expenses/${encodeURIComponent(id)}`);
+      await store.refreshQuietly();
+      return result;
     },
 
     // Sales ----------------------------------------------------------------

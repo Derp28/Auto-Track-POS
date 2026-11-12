@@ -128,6 +128,8 @@ check('cashier may access checkout, catalog, and own sales', canAccessPath(cashi
 check('cashier may not access purchasing', !canAccessPath(cashier, '/purchasing'));
 check('cashier may not access users, settings, or system', !canAccessPath(cashier, '/users') && !canAccessPath(cashier, '/settings') && !canAccessPath(cashier, '/system'));
 check('cashier cannot see product cost or stock value', !can(cashier, 'seeCost') && !can(cashier, 'seeValue'));
+check('administrator may export report data', can(admin, 'exportReports'));
+check('cashier cannot export report data', !can(cashier, 'exportReports'));
 check('cashier cannot edit the catalog or adjust inventory', !can(cashier, 'editCatalog') && !can(cashier, 'adjustInventory'));
 check('cashier can request returns, voids, and discounts', can(cashier, 'returnSale') && can(cashier, 'voidSale') && can(cashier, 'applyDiscount'));
 equal('role labels are explicit', `${roleLabel(admin)} / ${roleLabel(cashier)} / ${roleLabel(null)}`, 'Administrator / Cashier / Signed out');

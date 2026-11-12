@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 import {
   createCashier,
@@ -120,6 +120,33 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
     await adminPage.getByRole('tab', { name: 'Inventory valuation' }).click();
     await adminPage.waitForFunction(() => document.querySelector('#report-content')?.textContent?.includes('Stock value'));
 
+    const [xlsxDownload] = await Promise.all([
+      adminPage.waitForEvent('download'),
+      adminPage.locator('[data-export-report="xlsx"]').click(),
+    ]);
+    const xlsxPath = await xlsxDownload.path();
+    assert.ok(xlsxPath, 'Excel download has a local path');
+    const xlsxBytes = readFileSync(xlsxPath);
+    assert.equal(xlsxBytes.subarray(0, 2).toString('ascii'), 'PK');
+    assert.match(
+      xlsxDownload.suggestedFilename(),
+      /^autotrack-inventory-valuation_\d{4}-\d{2}-\d{2}\.xlsx$/,
+    );
+    await adminPage.waitForFunction(() => /Export ready/.test(document.querySelector('#toast-region')?.textContent || ''));
+
+    const [pdfDownload] = await Promise.all([
+      adminPage.waitForEvent('download'),
+      adminPage.locator('[data-export-report="pdf"]').click(),
+    ]);
+    const pdfPath = await pdfDownload.path();
+    assert.ok(pdfPath, 'PDF download has a local path');
+    const pdfBytes = readFileSync(pdfPath);
+    assert.equal(pdfBytes.subarray(0, 5).toString('ascii'), '%PDF-');
+    assert.match(
+      pdfDownload.suggestedFilename(),
+      /^autotrack-inventory-valuation_\d{4}-\d{2}-\d{2}\.pdf$/,
+    );
+
     await adminPage.goto(`${server.base}/#/system`, { waitUntil: 'domcontentloaded' });
     await adminPage.waitForFunction(() => document.querySelector('#main-content')?.textContent?.includes('Schema migrations'));
     assert.match(await adminPage.locator('#main-content').innerText(), /003_least_privilege/);
@@ -201,6 +228,11 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
     await cashierPage.goto(`${server.base}/#/users`, { waitUntil: 'domcontentloaded' });
     await cashierPage.waitForFunction(() => /Access denied/i.test(document.querySelector('#main-content')?.textContent || ''));
     assert.match(await cashierPage.locator('#main-content').innerText(), /Access denied/i);
+
+    await cashierPage.goto(`${server.base}/#/reports`, { waitUntil: 'domcontentloaded' });
+    await cashierPage.waitForFunction(() => document.querySelector('#report-content')?.textContent?.includes('Daily sales summary'));
+    assert.equal(await cashierPage.locator('[data-export-report]').count(), 0);
+    assert.equal(await cashierPage.getByRole('button', { name: /Export Excel|Export PDF/ }).count(), 0);
   });
 
   assert.deepEqual(errors, [], `browser runtime errors:\n${errors.join('\n')}`);

@@ -46,7 +46,7 @@ const RESET_TABLES = [
   'idempotency_keys', 'audit_log', 'stock_movements', 'refunds', 'sale_voids',
   'sale_return_items', 'sale_returns', 'sale_payments', 'sale_items', 'sales',
   'po_receipt_items', 'po_receipts', 'purchase_order_items', 'purchase_orders',
-  'products', 'suppliers', 'categories', 'sessions', 'users', 'document_sequences', 'settings',
+  'expenses', 'products', 'suppliers', 'categories', 'sessions', 'users', 'document_sequences', 'settings',
 ];
 
 async function resetDatabase(owner) {
@@ -118,6 +118,17 @@ export async function api(base, method, route, { body, session, headers = {} } =
     .filter((value) => value && !value.endsWith('='))
     .join('; ');
   return { status: response.status, body: parsed, headers: response.headers, cookie, setCookies };
+}
+
+export async function apiBuffer(base, method, route, { session, headers = {} } = {}) {
+  const requestHeaders = { ...headers };
+  if (session?.cookie) requestHeaders.cookie = session.cookie;
+  if (session?.csrf && !['GET', 'HEAD'].includes(method.toUpperCase())) {
+    requestHeaders['x-csrf-token'] = session.csrf;
+  }
+  const response = await fetch(`${base}${route}`, { method, headers: requestHeaders });
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return { status: response.status, body: buffer, headers: response.headers };
 }
 
 export function assertStatus(response, status, message = '') {

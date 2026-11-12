@@ -62,6 +62,8 @@ test('administrators can update shop settings and the change is audited', async 
       cashierDiscountLimitBps: 500,
       discountReasonRequired: true,
       maxLineQuantity: 50,
+      monthlySalesTargetCents: 2500000,
+      salesComparisonMode: 'yearly',
     },
   });
   assertStatus(updated, 200);
@@ -71,10 +73,14 @@ test('administrators can update shop settings and the change is audited', async 
   assert.equal(updated.body.taxRateBps, 1200);
   assert.equal(updated.body.cashierDiscountLimitBps, 500);
   assert.equal(updated.body.maxLineQuantity, 50);
+  assert.equal(updated.body.monthlySalesTargetCents, 2500000);
+  assert.equal(updated.body.salesComparisonMode, 'yearly');
 
   const reread = await settings(admin);
   assert.equal(reread.shopName, 'Auto-Track Downtown');
   assert.equal(reread.receiptFooter, 'Drive safe.');
+  assert.equal(reread.monthlySalesTargetCents, 2500000);
+  assert.equal(reread.salesComparisonMode, 'yearly');
 
   const audit = await ctx.owner.query(
     "SELECT details FROM audit_log WHERE action = 'SETTINGS_UPDATED' ORDER BY id DESC LIMIT 1",
@@ -82,6 +88,8 @@ test('administrators can update shop settings and the change is audited', async 
   assert.ok(audit.rows[0]);
   assert.ok(audit.rows[0].details.changed.includes('shopName'));
   assert.equal(audit.rows[0].details.taxRateBps, 1200);
+  assert.equal(audit.rows[0].details.monthlySalesTargetCents, 2500000);
+  assert.equal(audit.rows[0].details.salesComparisonMode, 'yearly');
 });
 
 test('settings validation rejects unsafe or malformed values', async () => {
@@ -97,6 +105,9 @@ test('settings validation rejects unsafe or malformed values', async () => {
     { ...current, taxRateBps: 10001 },
     { ...current, cashierDiscountLimitBps: -1 },
     { ...current, maxLineQuantity: 0 },
+    { ...current, monthlySalesTargetCents: -1 },
+    { ...current, monthlySalesTargetCents: 1.5 },
+    { ...current, salesComparisonMode: 'weekly' },
     { ...current, allowNegativeStock: true },
     { ...current, email: 'not-an-email' },
   ];
@@ -447,6 +458,19 @@ test('dashboards show scoped totals, recent sales, and low stock without leaking
   assert.ok(statuses.has('VOIDED'));
   assert.ok(statuses.has('PARTIALLY_RETURNED'));
   assert.ok(statuses.has('COMPLETED'));
+  assert.ok(adminDash.body.insights, 'administrator dashboard includes insights');
+  assert.equal(adminDash.body.insights.target.isSet, false);
+  assert.equal(adminDash.body.insights.target.monthNetCents, 20000);
+  assert.equal(adminDash.body.insights.comparison.mode, 'monthly');
+  assert.equal(adminDash.body.insights.comparison.currentCents, 20000);
+  assert.equal(adminDash.body.insights.trend.points.length, 6);
+  assert.equal(adminDash.body.insights.trend.points.at(-1).isCurrent, true);
+  assert.equal(adminDash.body.insights.trend.points.at(-1).valueCents, 20000);
+  assert.equal(adminDash.body.insights.topProducts.totalCents, 20000);
+  assert.equal(adminDash.body.insights.topProducts.leading.sku, 'REP-1');
+  assert.equal(adminDash.body.insights.topProducts.items[0].netCents, 20000);
+  assert.equal(adminDash.body.insights.expenses.manualCents, 0);
+  assert.equal(adminDash.body.insights.expenses.purchaseCents, 0);
 
   const cashierDash = await api(base, 'GET', '/api/dashboard', { session: cashier1.session });
   assertStatus(cashierDash, 200);
@@ -456,6 +480,7 @@ test('dashboards show scoped totals, recent sales, and low stock without leaking
   assert.equal(cashierDash.body.recentSales.length, 2);
   assert.equal(cashierDash.body.lowStock[0].costCents, undefined);
   assert.equal(cashierDash.body.lowStockCount, 1);
+  assert.equal(cashierDash.body.insights, null);
 });
 
 test('valuation and low-stock reports expose cost only to administrators', async () => {

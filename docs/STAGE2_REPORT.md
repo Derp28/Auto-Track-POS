@@ -1,6 +1,6 @@
 # Auto-Track POS - Stage 2 report (local MySQL edition)
 
-**Date:** 2026-11-01
+**Date:** 2026-11-01; report export addendum 2026-11-06
 **Status:** Stage 2 backend and UI implementation complete. **GATE-2 passed.**
 **Variant:** local-only MySQL 8.4 LTS port on the `local-mysql` branch.
 **Current focus:** self-hosted local website with MySQL on the same machine.
@@ -14,7 +14,9 @@ production readiness, and no unrun test is presented as passing.
 
 The Stage 1 layout, navigation, role visibility, and visual system were preserved while
 the data layer moved from PostgreSQL 17 to MySQL 8.4 LTS. The API contract, money and
-inventory rules, permission matrix, and UI behavior are unchanged.
+inventory rules, permission matrix, and UI behavior are unchanged. Administrator XLSX and
+PDF report exports were added on 2026-11-06 after GATE-2 and verified independently; the
+GATE-2 status is unchanged.
 
 ### Platform
 
@@ -51,7 +53,7 @@ inventory rules, permission matrix, and UI behavior are unchanged.
 | Inventory | On-hand/value display, adjustments with reason, ledger history, low stock |
 | Catalog | Categories, products, archive, SKU/barcode, price/cost controls, category manager |
 | Purchasing | Suppliers, PO draft/order/receive/close/cancel, partial receiving, over-receipt guard |
-| Reports | Daily sales, sales history, valuation, low stock, stock movements, purchasing |
+| Reports | Daily sales, sales history, valuation, low stock, stock movements, purchasing; server-generated XLSX/PDF exports for administrators; cashier scope preserved |
 | Users | Create/edit/deactivate/reactivate/reset, last-admin protection, session revocation |
 | Settings | Shop identity, currency/timezone/cutoff, tax, receipt text, discount/quantity rules |
 | System status | Schema migrations, database/server runtime, explicit operational gaps |
@@ -76,9 +78,11 @@ isolated `autotrack_test_mysql` database, headless Microsoft Edge through
 
 | Check | Command | Result |
 |---|---|---|
-| Full backend/browser suite | `node --test --test-concurrency=1 "tests/*.test.mjs"` | **84 tests, 84 pass, 0 fail, 0 skipped** |
+| Full backend/browser suite | `node --test --test-concurrency=1 "tests/*.test.mjs"` | **88 tests, 88 pass, 0 fail, 0 skipped** |
 | Static UI boundary | `node scripts/check-ui.mjs` | **285 checks pass** |
-| Client logic | `node scripts/test-ui.mjs` | **45 checks pass** |
+| Client logic | `node scripts/test-ui.mjs` | **47 checks pass** |
+| Report exports | `node --test --test-concurrency=1 tests/exports.test.mjs` | **4 export tests pass**: XLSX/PDF content, admin-only access, filter handling, and `REPORT_EXPORTED` audit |
+| Dependency audit | `npm audit` | **0 vulnerabilities** |
 | Isolated backup | `node scripts/backup.mjs --database-url ... --output ...` | SQL dump with tables, triggers, function, SHA-256 file, and JSON manifest |
 | Isolated restore | `node scripts/restore.mjs --file ... --target ... --app-url ...` | 22 tables, 3 migrations, shop `Auto-Track`, app role readable, audit delete denied |
 | TLS deployment test | `tests/deployment.test.mjs` | HTTPS on `0.0.0.0`; non-loopback HTTP refused |
@@ -94,6 +98,9 @@ responses and assert the same role and UI boundaries as the PostgreSQL baseline.
 - Administrator can open every primary screen without a page error.
 - Catalog search and category entry point render live data.
 - Reports load daily sales and switch to valuation.
+- Administrator downloads an XLSX and a PDF from the reports screen; the browser test
+  verifies both downloads are non-empty and correctly named.
+- Cashier reports hide the export controls and the cashier export request is denied.
 - System status shows the applied MySQL migrations.
 - Cashier login forces a new password.
 - Cashier completes a checkout and receives a confirmed receipt.
@@ -110,7 +117,7 @@ The suite includes auth/lockout/session revocation, role and report scoping, inv
 CRUD, totals, tax/discount/refund arithmetic, idempotency conflicts, duplicate submission,
 last-unit concurrency, receiving concurrency, negative-stock rejection, returns/voids,
 audit retention, database constraint/immutability checks, environment validation, restart
-persistence, TLS refusal, and MySQL backup/restore.
+persistence, TLS refusal, MySQL backup/restore, and report export content/access/audit.
 
 ### Port-specific fixes verified by the suite
 
@@ -137,6 +144,9 @@ persistence, TLS refusal, and MySQL backup/restore.
   are implemented and tested.
 - Production non-loopback serving requires TLS unless the explicit test-only override is set.
 - The first-run shortcuts contain no database password or bootstrap token.
+- Report exports require the administrator `reports:export` permission; cashiers receive
+  `403` and see no export controls. Files are generated on the server, and every successful
+  export writes a `REPORT_EXPORTED` audit row. The public demo omits export controls.
 
 ## 4. Gaps and limitations
 
@@ -181,6 +191,8 @@ apps are not part of this Stage 2 scope.
 - GATE-2: passed.
 - T-201 through T-218: done with evidence on PostgreSQL.
 - T-225 MySQL local variant: implementation, full suite, first-run launcher, and demo rebuild verified; published on `local-mysql` at commit `89defa3`.
+- T-226 administrator report exports: implemented and verified on 2026-11-06; XLSX/PDF,
+  admin-only access, audit logging, and demo control hiding are covered by tests.
 - Local self-hosted website workflows: verified on loopback with the isolated MySQL test
   database.
 - T-219 LAN pilot: deferred by user direction.

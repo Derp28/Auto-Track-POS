@@ -24,6 +24,17 @@ SET @s = CONCAT('GRANT INSERT, UPDATE ON `', @db, '`.sessions TO ''autotrack_app
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 SET @s = CONCAT('GRANT UPDATE ON `', @db, '`.settings TO ''autotrack_app''@''localhost''');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- The expenses table is created by migration 004. This conditional grant keeps
+-- restore re-runs safe on older backups while still granting current backups.
+SET @has_expenses = (
+  SELECT COUNT(*) FROM information_schema.tables
+   WHERE table_schema = @db AND table_name = 'expenses'
+);
+SET @s = IF(@has_expenses > 0,
+  CONCAT('GRANT INSERT, UPDATE ON `', @db, '`.expenses TO ''autotrack_app''@''localhost'''),
+  'DO 0');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 SET @s = CONCAT('GRANT INSERT, UPDATE ON `', @db, '`.categories TO ''autotrack_app''@''localhost''');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 SET @s = CONCAT('GRANT INSERT, UPDATE ON `', @db, '`.suppliers TO ''autotrack_app''@''localhost''');

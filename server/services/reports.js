@@ -2,12 +2,13 @@ import { query } from '../db.js';
 import { productDto, dateString } from '../lib/dto.js';
 import { listMovements } from './inventory.js';
 import { listPurchaseOrders } from './purchasing.js';
+import { buildDashboardInsights } from './dashboard-insights.js';
 
 function saleRevenueExTax(row) {
   return Number(row.net_cents) - (row.tax_inclusive ? Number(row.tax_cents) : 0);
 }
 
-async function loadRange({ from, to, cashierId }) {
+export async function loadSalesRange({ from, to, cashierId }) {
   const params = [from, to, cashierId];
   const [sales, items, payments, returns, returnItems] = await Promise.all([
     query(
@@ -49,7 +50,7 @@ async function loadRange({ from, to, cashierId }) {
 }
 
 export async function dailyReport({ from, to, user }) {
-  const data = await loadRange({ from, to, cashierId: user.role === 'CASHIER' ? user.id : null });
+  const data = await loadSalesRange({ from, to, cashierId: user.role === 'CASHIER' ? user.id : null });
   const completed = data.sales.filter((sale) => sale.status !== 'VOIDED');
   const voided = data.sales.filter((sale) => sale.status === 'VOIDED');
   const completedIds = new Set(completed.map((sale) => Number(sale.id)));
@@ -173,8 +174,8 @@ export async function stockMovementReport({ productId = null, type = '', from = 
   return listMovements({ productId, type, from, to, limit });
 }
 
-export async function purchasingReport({ status = '', supplierId = null } = {}) {
-  return listPurchaseOrders({ status, supplierId, limit: 500 });
+export async function purchasingReport({ status = '', supplierId = null, limit = 500 } = {}) {
+  return listPurchaseOrders({ status, supplierId, limit });
 }
 
 export async function dashboard(user) {
@@ -210,6 +211,7 @@ export async function dashboard(user) {
   const lowTotal = await query(
     'SELECT count(*)::int AS n FROM products WHERE active AND stock_on_hand <= reorder_level',
   );
+  const insights = cashierOnly ? null : await buildDashboardInsights({ businessDate });
   return {
     businessDate,
     scopeLabel: cashierOnly ? `My sales — ${user.displayName}` : 'Shop-wide view',
@@ -234,6 +236,7 @@ export async function dashboard(user) {
       productDto(row, { includeCost: !cashierOnly, categoryName: row.category_name }),
     ),
     lowStockCount: lowTotal.rows[0].n,
+    insights,
   };
 }
 

@@ -60,6 +60,311 @@ function whole(value, field, { min = 0, max = 9999999 } = {}) {
   return parsed;
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const EXPENSE_PAID_VIA = ['CASH', 'CARD_EXTERNAL', 'BANK_TRANSFER', 'OTHER'];
+
+function parseDate(value) {
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  return { year, month, day };
+}
+
+function calendarDate(year, month, day) {
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
+
+function daysInMonth(year, month) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function addMonths(year, month, delta) {
+  const total = year * 12 + (month - 1) + delta;
+  return { year: Math.floor(total / 12), month: (total % 12 + 12) % 12 + 1 };
+}
+
+function formatRange(from, to) {
+  const start = parseDate(from);
+  const end = parseDate(to);
+  if (start.year === end.year && start.month === end.month) {
+    return `${MONTHS[start.month - 1]} ${start.day}–${end.day}, ${start.year}`;
+  }
+  if (start.year === end.year) {
+    return `${MONTHS[start.month - 1]} ${start.day}–${MONTHS[end.month - 1]} ${end.day}, ${start.year}`;
+  }
+  return `${MONTHS[start.month - 1]} ${start.day}, ${start.year}–${MONTHS[end.month - 1]} ${end.day}, ${end.year}`;
+}
+
+function monthWindow(businessDate) {
+  const date = parseDate(businessDate);
+  const from = calendarDate(date.year, date.month, 1);
+  return { from, to: businessDate, label: formatRange(from, businessDate), ...date };
+}
+
+function previousMonthWindow(businessDate) {
+  const current = parseDate(businessDate);
+  const previous = addMonths(current.year, current.month, -1);
+  const day = Math.min(current.day, daysInMonth(previous.year, previous.month));
+  const from = calendarDate(previous.year, previous.month, 1);
+  const to = calendarDate(previous.year, previous.month, day);
+  return { from, to, label: formatRange(from, to) };
+}
+
+function yearWindow(businessDate) {
+  const current = parseDate(businessDate);
+  const from = calendarDate(current.year, 1, 1);
+  return { from, to: businessDate, label: formatRange(from, businessDate), ...current };
+}
+
+function previousYearWindow(businessDate) {
+  const current = parseDate(businessDate);
+  const previousYear = current.year - 1;
+  const day = Math.min(current.day, daysInMonth(previousYear, current.month));
+  const from = calendarDate(previousYear, 1, 1);
+  const to = calendarDate(previousYear, current.month, day);
+  return { from, to, label: formatRange(from, to) };
+}
+
+function percentage(value, total) {
+  return total ? Math.round((value / total) * 1000) / 10 : 0;
+}
+
+function expenseDto(expense) {
+  return {
+    id: String(expense.id),
+    expenseDate: expense.expenseDate,
+    category: expense.category,
+    description: expense.description,
+    amountCents: expense.amountCents,
+    paidVia: expense.paidVia,
+    createdBy: expense.createdBy || null,
+    createdByName: expense.createdByName || null,
+    updatedBy: expense.updatedBy || null,
+    updatedByName: expense.updatedByName || null,
+    createdAt: expense.createdAt || null,
+    updatedAt: expense.updatedAt || null,
+    deletedBy: expense.deletedBy || null,
+    deletedByName: expense.deletedByName || null,
+    deletedAt: expense.deletedAt || null,
+  };
+}
+
+function periodNetCents(state, from, to) {
+  let total = 0;
+  for (const sale of state.sales) {
+    if (sale.businessDate >= from && sale.businessDate <= to && sale.status !== 'VOIDED') {
+      total += sale.totalCents - sale.taxCents;
+    }
+  }
+  for (const sale of state.sales) {
+    for (const entry of sale.returns) {
+      if (entry.businessDate >= from && entry.businessDate <= to) {
+        total -= entry.refundCents - entry.taxCents;
+      }
+    }
+  }
+  return total;
+}
+
+function trendSeries(mode, businessDate) {
+  const current = parseDate(businessDate);
+  if (mode === 'yearly') {
+    const points = [];
+    for (let offset = -4; offset <= 0; offset += 1) {
+      const year = current.year + offset;
+      const from = calendarDate(year, 1, 1);
+      const to = offset === 0 ? businessDate : calendarDate(year, 12, 31);
+      points.push({
+        key: String(year),
+        label: String(year),
+        periodLabel: offset === 0 ? `Jan 1–${MONTHS[current.month - 1]} ${current.day}, ${year}` : String(year),
+        from,
+        to,
+        isCurrent: offset === 0,
+      });
+    }
+    return points;
+  }
+  const points = [];
+  for (let offset = -5; offset <= 0; offset += 1) {
+    const { year, month } = addMonths(current.year, current.month, offset);
+    const from = calendarDate(year, month, 1);
+    const to = offset === 0 ? businessDate : calendarDate(year, month, daysInMonth(year, month));
+    points.push({
+      key: `${year}-${pad(month)}`,
+      label: MONTHS[month - 1],
+      periodLabel: offset === 0 ? formatRange(from, businessDate) : formatRange(from, to),
+      from,
+      to,
+      isCurrent: offset === 0,
+    });
+  }
+  return points;
+}
+
+function topProductInsights(state, { from, to, totalCents }) {
+  if (!totalCents) {
+    return { totalCents: 0, leading: null, items: [], otherCents: 0, otherSharePct: 0 };
+  }
+  const rows = new Map();
+  const add = (productId, quantity, netCents) => {
+    const row = rows.get(String(productId)) || { productId: String(productId), quantity: 0, netCents: 0 };
+    row.quantity += quantity;
+    row.netCents += netCents;
+    rows.set(row.productId, row);
+  };
+  for (const sale of state.sales) {
+    if (sale.businessDate < from || sale.businessDate > to || sale.status === 'VOIDED') continue;
+    for (const item of sale.items) add(item.productId, item.quantity, item.totalCents - item.taxCents);
+  }
+  for (const sale of state.sales) {
+    for (const entry of sale.returns) {
+      if (entry.businessDate < from || entry.businessDate > to) continue;
+      for (const item of entry.items) add(item.productId, -item.quantity, -(item.refundCents - item.taxCents));
+    }
+  }
+  const items = [...rows.values()]
+    .filter((row) => row.netCents > 0)
+    .map((row) => {
+      const product = state.products.find((entry) => entry.id === row.productId);
+      const category = product ? state.categories.find((entry) => entry.id === product.categoryId) : null;
+      return {
+        productId: row.productId,
+        sku: product ? product.sku : '',
+        name: product ? product.name : 'Archived product',
+        categoryName: category ? category.name : null,
+        quantity: row.quantity,
+        netCents: row.netCents,
+        sharePct: percentage(row.netCents, totalCents),
+      };
+    })
+    .sort((a, b) => b.netCents - a.netCents)
+    .slice(0, 5);
+  const shownCents = items.reduce((sum, item) => sum + item.netCents, 0);
+  const otherCents = Math.max(0, totalCents - shownCents);
+  return {
+    totalCents,
+    leading: items[0] || null,
+    items,
+    otherCents,
+    otherSharePct: percentage(otherCents, totalCents),
+  };
+}
+
+function purchaseOrderInsights(state, { from, to }) {
+  const receipts = [];
+  for (const order of state.purchaseOrders) {
+    const supplier = state.suppliers.find((entry) => entry.id === order.supplierId);
+    for (const receipt of order.receipts) {
+      const receiptDate = receipt.businessDate || localDate(new Date(receipt.createdAt));
+      if (receiptDate < from || receiptDate > to) continue;
+      receipts.push({
+        id: String(receipt.id || receipt.number),
+        number: receipt.number,
+        receiptDate,
+        totalCents: receipt.totalCents,
+        purchaseOrderNumber: order.number,
+        supplierName: supplier ? supplier.name : 'Unknown supplier',
+      });
+    }
+  }
+  receipts.sort((a, b) => b.receiptDate.localeCompare(a.receiptDate) || b.number.localeCompare(a.number));
+  return {
+    totalCents: receipts.reduce((sum, receipt) => sum + receipt.totalCents, 0),
+    count: receipts.length,
+    receipts: receipts.slice(0, 5),
+  };
+}
+
+function dashboardInsights(state, businessDate) {
+  const currentMonth = monthWindow(businessDate);
+  const previousMonth = previousMonthWindow(businessDate);
+  const currentYear = yearWindow(businessDate);
+  const previousYear = previousYearWindow(businessDate);
+  const mode = state.settings.salesComparisonMode === 'yearly' ? 'yearly' : 'monthly';
+  const targetCents = Number(state.settings.monthlySalesTargetCents || 0);
+  const currentWindow = mode === 'yearly' ? currentYear : currentMonth;
+  const previousWindow = mode === 'yearly' ? previousYear : previousMonth;
+  const monthNet = periodNetCents(state, currentMonth.from, currentMonth.to);
+  const currentNet = mode === 'yearly' ? periodNetCents(state, currentYear.from, currentYear.to) : monthNet;
+  const previousNet = mode === 'yearly'
+    ? periodNetCents(state, previousYear.from, previousYear.to)
+    : periodNetCents(state, previousMonth.from, previousMonth.to);
+  const trendPoints = trendSeries(mode, businessDate).map((point) => ({
+    ...point,
+    valueCents: periodNetCents(state, point.from, point.to),
+    sharePct: 0,
+  }));
+  const manualRows = state.expenses
+    .filter((expense) => !expense.deletedAt
+      && expense.expenseDate >= currentMonth.from
+      && expense.expenseDate <= currentMonth.to)
+    .sort((a, b) => b.expenseDate.localeCompare(a.expenseDate) || Number(b.id) - Number(a.id));
+  const manualTotals = {
+    totalCents: manualRows.reduce((sum, expense) => sum + expense.amountCents, 0),
+    count: manualRows.length,
+  };
+  const topProducts = topProductInsights(state, {
+    from: currentMonth.from,
+    to: currentMonth.to,
+    totalCents: monthNet,
+  });
+  const purchaseOrders = purchaseOrderInsights(state, { from: currentMonth.from, to: currentMonth.to });
+  const elapsedDays = currentMonth.day;
+  const totalDays = daysInMonth(currentMonth.year, currentMonth.month);
+  const expectedProgressPct = Math.round((elapsedDays / totalDays) * 1000) / 10;
+  const rawProgressPct = targetCents ? Math.round((monthNet / targetCents) * 1000) / 10 : null;
+  const progressPct = rawProgressPct === null ? null : Math.max(0, rawProgressPct);
+  const targetSet = targetCents > 0;
+  const paceDeltaPct = targetSet ? Math.round((progressPct - expectedProgressPct) * 10) / 10 : null;
+  const changePct = previousNet === 0
+    ? (currentNet === 0 ? 0 : null)
+    : Math.round(((currentNet - previousNet) / previousNet) * 1000) / 10;
+  const totalOutflowsCents = manualTotals.totalCents + purchaseOrders.totalCents;
+
+  return {
+    target: {
+      targetCents,
+      isSet: targetSet,
+      monthNetCents: monthNet,
+      remainingCents: targetSet ? Math.max(0, targetCents - monthNet) : 0,
+      progressPct,
+      rawProgressPct,
+      expectedProgressPct,
+      paceDeltaPct,
+      onPace: targetSet ? progressPct >= expectedProgressPct : null,
+      monthLabel: `${MONTHS[currentMonth.month - 1]} ${currentMonth.year}`,
+      rangeLabel: currentMonth.label,
+      daysElapsed: elapsedDays,
+      daysInMonth: totalDays,
+    },
+    comparison: {
+      mode,
+      currentCents: currentNet,
+      previousCents: previousNet,
+      changeCents: currentNet - previousNet,
+      changePct,
+      currentLabel: currentWindow.label,
+      previousLabel: previousWindow.label,
+      periodLabel: mode === 'yearly' ? 'vs same period last year' : 'vs same period last month',
+    },
+    trend: {
+      mode,
+      points: trendPoints,
+    },
+    topProducts,
+    expenses: {
+      rangeLabel: currentMonth.label,
+      manualCents: manualTotals.totalCents,
+      manualCount: manualTotals.count,
+      purchaseCents: purchaseOrders.totalCents,
+      purchaseCount: purchaseOrders.count,
+      totalCents: totalOutflowsCents,
+      salesAfterOutflowsCents: monthNet - totalOutflowsCents,
+      manual: manualRows.slice(0, 5).map(expenseDto),
+      purchaseReceipts: purchaseOrders.receipts,
+    },
+  };
+}
+
 export function createShop(seed) {
   const state = {
     settings: { ...seed.settings },
@@ -69,6 +374,7 @@ export function createShop(seed) {
     suppliers: [],
     purchaseOrders: [],
     sales: [],
+    expenses: [],
     movements: [],
     sequences: new Map(),
     idempotency: new Map(),
@@ -88,6 +394,7 @@ export function createShop(seed) {
       poLine: 0,
       receipt: 0,
       receiptItem: 0,
+      expense: 0,
     },
     startedAt: new Date().toISOString(),
   };
@@ -338,6 +645,7 @@ export function createShop(seed) {
         id: receipt.number,
         number: receipt.number,
         createdAt: receipt.createdAt,
+        businessDate: receipt.businessDate || localDate(new Date(receipt.createdAt)),
         receivedBy: receipt.receivedBy,
         receivedByName: receipt.receivedByName,
         totalCents: receipt.totalCents,
@@ -956,6 +1264,7 @@ export function createShop(seed) {
       id: null,
       number: nextNumber('RCV', businessDate),
       createdAt: iso(at),
+      businessDate,
       receivedBy: actor.id,
       receivedByName: actor.displayName,
       totalCents: 0,
@@ -1171,6 +1480,96 @@ export function createShop(seed) {
       .map((product) => productDto(product, { includeCost }));
   }
 
+  // Operating expenses -----------------------------------------------------
+  function expenseInput(input) {
+    const value = input || {};
+    const expenseDate = String(value.expenseDate || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(expenseDate)) {
+      fail(400, 'VALIDATION_ERROR', 'Choose a valid expense date.', { expenseDate: 'Required.' });
+    }
+    if (expenseDate > localDate(new Date())) {
+      fail(400, 'FUTURE_EXPENSE_DATE', 'Expense date cannot be in the future.', {
+        expenseDate: 'Use today or an earlier date.',
+      });
+    }
+    const paidVia = String(value.paidVia || '').toUpperCase();
+    if (!EXPENSE_PAID_VIA.includes(paidVia)) {
+      fail(400, 'VALIDATION_ERROR', 'Choose a valid payment method.', { paidVia: 'Invalid payment method.' });
+    }
+    return {
+      expenseDate,
+      category: text(value.category, 'category', { max: 60 }),
+      description: text(value.description, 'description', { max: 200 }),
+      amountCents: whole(value.amountCents, 'amountCents', { min: 1, max: 1_000_000_000_000_000 }),
+      paidVia,
+    };
+  }
+
+  function listExpenses({ from = null, to = null, limit = 100, includeDeleted = false } = {}) {
+    return state.expenses
+      .filter((expense) => (!from || expense.expenseDate >= from)
+        && (!to || expense.expenseDate <= to)
+        && (includeDeleted || !expense.deletedAt))
+      .slice()
+      .sort((a, b) => b.expenseDate.localeCompare(a.expenseDate) || Number(b.id) - Number(a.id))
+      .slice(0, limit)
+      .map(expenseDto);
+  }
+
+  function expenseTotals({ from, to }) {
+    const rows = state.expenses.filter((expense) => !expense.deletedAt
+      && expense.expenseDate >= from
+      && expense.expenseDate <= to);
+    return {
+      totalCents: rows.reduce((sum, expense) => sum + expense.amountCents, 0),
+      count: rows.length,
+    };
+  }
+
+  function createExpense(input, actor, at = new Date()) {
+    if (!actor) fail(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+    const parsed = expenseInput(input);
+    const stamp = iso(at);
+    const expense = {
+      id: nextId('expense'),
+      ...parsed,
+      createdBy: actor.id,
+      createdByName: actor.displayName,
+      updatedBy: null,
+      updatedByName: null,
+      createdAt: stamp,
+      updatedAt: stamp,
+      deletedBy: null,
+      deletedByName: null,
+      deletedAt: null,
+    };
+    state.expenses.push(expense);
+    return expenseDto(expense);
+  }
+
+  function updateExpense(id, input, actor, at = new Date()) {
+    if (!actor) fail(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+    const expense = state.expenses.find((entry) => entry.id === String(id) && !entry.deletedAt);
+    if (!expense) fail(404, 'NOT_FOUND', 'Expense not found.');
+    Object.assign(expense, expenseInput(input), {
+      updatedBy: actor.id,
+      updatedByName: actor.displayName,
+      updatedAt: iso(at),
+    });
+    return expenseDto(expense);
+  }
+
+  function deleteExpense(id, actor, at = new Date()) {
+    if (!actor) fail(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+    const expense = state.expenses.find((entry) => entry.id === String(id) && !entry.deletedAt);
+    if (!expense) fail(404, 'NOT_FOUND', 'Expense not found.');
+    expense.deletedBy = actor.id;
+    expense.deletedByName = actor.displayName;
+    expense.deletedAt = iso(at);
+    expense.updatedAt = expense.deletedAt;
+    return { id: String(id), deleted: true };
+  }
+
   function dashboard(user, now = new Date()) {
     const businessDate = localDate(now);
     const report = dailyReport({ from: businessDate, to: businessDate, user });
@@ -1204,6 +1603,7 @@ export function createShop(seed) {
       recentSales,
       lowStock: low.slice(0, 6),
       lowStockCount: low.length,
+      insights: user.role === 'ADMIN' ? dashboardInsights(state, businessDate) : null,
     };
   }
 
@@ -1274,6 +1674,17 @@ export function createShop(seed) {
       { min: 0, max: 10000 },
     );
     const maxLineQuantity = whole(input.maxLineQuantity ?? current.maxLineQuantity, 'maxLineQuantity', { min: 1, max: 9999 });
+    const monthlySalesTargetCents = whole(
+      input.monthlySalesTargetCents ?? current.monthlySalesTargetCents ?? 0,
+      'monthlySalesTargetCents',
+      { min: 0, max: 1_000_000_000_000_000 },
+    );
+    const salesComparisonMode = String(input.salesComparisonMode ?? current.salesComparisonMode ?? 'monthly');
+    if (!['monthly', 'yearly'].includes(salesComparisonMode)) {
+      fail(400, 'VALIDATION_ERROR', 'Comparison mode must be monthly or yearly.', {
+        salesComparisonMode: 'Choose monthly or yearly.',
+      });
+    }
     state.settings = {
       ...current,
       shopName: text(input.shopName ?? current.shopName, 'shopName', { max: 120 }),
@@ -1293,6 +1704,8 @@ export function createShop(seed) {
       cashierDiscountLimitBps,
       discountReasonRequired: Boolean(input.discountReasonRequired ?? current.discountReasonRequired),
       maxLineQuantity,
+      monthlySalesTargetCents,
+      salesComparisonMode,
       updatedAt: new Date().toISOString(),
     };
     return state.settings;
@@ -1307,7 +1720,8 @@ export function createShop(seed) {
       purchase_orders: state.purchaseOrders.length,
       active_users: state.users.filter((entry) => entry.active).length,
       stock_movements: state.movements.length,
-      audit_records: state.sales.length + state.movements.length,
+      expenses: state.expenses.filter((entry) => !entry.deletedAt).length,
+      audit_records: state.sales.length + state.movements.length + state.expenses.length,
       active_sessions: user ? 1 : 0,
     };
     return {
@@ -1331,6 +1745,7 @@ export function createShop(seed) {
           { version: '001_core', appliedAt: state.startedAt },
           { version: '002_immutability', appliedAt: state.startedAt },
           { version: '003_least_privilege', appliedAt: state.startedAt },
+          { version: '004_dashboard_insights', appliedAt: state.startedAt },
         ],
       },
       counts,
@@ -1378,6 +1793,12 @@ export function createShop(seed) {
     dailyReport,
     lowStockProducts,
     dashboard,
+    expenseDto,
+    listExpenses,
+    expenseTotals,
+    createExpense,
+    updateExpense,
+    deleteExpense,
     valuation,
     movements,
     listSales,

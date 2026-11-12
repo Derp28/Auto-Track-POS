@@ -13,6 +13,8 @@ import { catalogRouter, inventoryRouter } from './routes/catalog.js';
 import { purchasingRouter, suppliersRouter } from './routes/purchasing.js';
 import { salesRouter } from './routes/sales.js';
 import { bootstrapRouter, reportsRouter } from './routes/reports.js';
+import { exportsRouter } from './routes/exports.js';
+import { expensesRouter } from './routes/expenses.js';
 
 export function createApp() {
   const app = express();
@@ -41,6 +43,8 @@ export function createApp() {
   app.use('/api/purchasing', purchasingRouter);
   app.use('/api/sales', salesRouter);
   app.use('/api/reports', reportsRouter);
+  app.use('/api/exports', exportsRouter);
+  app.use('/api/expenses', expensesRouter);
   app.use('/api', bootstrapRouter);
 
   app.use('/api', (req, res) => notFoundHandler(req, res));

@@ -95,6 +95,11 @@ await patchFile(path.join(outDir, 'js', 'app.js'), [
     "setConnectionBanner('Loading the demo shop…');",
   ],
   ['app.js login note', 'Secure shop server sign-in', 'In-browser demo sign-in'],
+  [
+    'app.js live badge',
+    '<span class="badge badge--live">${icon(\'check\', 12)} Live</span>',
+    '<span class="badge badge--muted">${icon(\'check\', 12)} Demo</span>',
+  ],
 ]);
 
 await patchFile(path.join(outDir, 'views', 'login.js'), [
@@ -175,6 +180,11 @@ await patchFile(path.join(outDir, 'views', 'settings.js'), [
 
 await patchFile(path.join(outDir, 'views', 'reports.js'), [
   ['reports description', 'reports from the shop server.', 'reports from the demo fixtures.'],
+  [
+    'reports demo export controls',
+    "actions: `${can(state.currentUser, 'exportReports') ? `",
+    "actions: `${false ? `",
+  ],
 ]);
 
 await patchFile(path.join(outDir, 'views', 'not-found.js'), [
@@ -195,6 +205,30 @@ await patchFile(path.join(outDir, 'views', 'catalog.js'), [
 
 await patchFile(path.join(outDir, 'views', 'inventory.js'), [
   ['inventory cashier callout', 'The server enforces this role boundary.', 'The demo API enforces this role boundary.'],
+]);
+
+await patchFile(path.join(outDir, 'views', 'dashboard.js'), [
+  [
+    'dashboard expense dialog copy',
+    'Changes are saved to the server and written to the audit log.',
+    'Changes are kept in this browser tab for the demo.',
+  ],
+  [
+    'dashboard recent sales empty copy',
+    'Completed checkouts appear here as soon as the server confirms them.',
+    'Completed checkouts appear here as soon as the demo confirms them.',
+  ],
+  ['dashboard controls badge', "badge('Server settings', 'muted')", "badge('Demo settings', 'muted')"],
+  [
+    'dashboard missing snapshot copy',
+    'The last server snapshot did not include the dashboard. Refresh to ask the server again.',
+    'The last demo snapshot did not include the dashboard. Reload the demo to try again.',
+  ],
+  [
+    'dashboard missing insights copy',
+    'Performance insights were not included in the server response. Refresh after confirming the latest migration has been applied.',
+    'Performance insights were not included in the demo response. Reload the demo to try again.',
+  ],
 ]);
 
 await patchFile(path.join(outDir, 'views', 'system.js'), [

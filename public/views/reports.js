@@ -12,8 +12,10 @@ import {
   statCard,
 } from '../js/ui.js';
 import { formatDate, formatDateTime, formatPercentFromBps } from '../js/money.js';
-import { api } from '../js/api.js';
+import { api, downloadFile } from '../js/api.js';
+import { can } from '../js/permissions.js';
 import { rerender } from '../js/router.js';
+import { toast } from '../components/toast.js';
 
 let activeTab = 'daily';
 const filters = {
@@ -33,6 +35,29 @@ const TABS = [
   { id: 'movements', label: 'Stock movements', adminOnly: true },
   { id: 'purchasing', label: 'Purchasing', adminOnly: true },
 ];
+
+const EXPORT_DATASETS = {
+  daily: 'daily',
+  sales: 'sales',
+  valuation: 'inventory',
+  'low-stock': 'low-stock',
+  movements: 'movements',
+  purchasing: 'purchasing',
+};
+
+function exportUrl(tabId, format) {
+  const params = new URLSearchParams();
+  params.set('from', filters.from);
+  params.set('to', filters.to);
+  if (tabId === 'valuation' && filters.category) params.set('categoryId', filters.category);
+  if (tabId === 'movements') {
+    if (filters.movementProduct) params.set('productId', filters.movementProduct);
+    if (filters.movementType) params.set('type', filters.movementType);
+  }
+  if (tabId === 'purchasing' && filters.poStatus) params.set('status', filters.poStatus);
+  const dataset = EXPORT_DATASETS[tabId] || 'daily';
+  return `/api/exports/${dataset}/${format}?${params.toString()}`;
+}
 
 function tabsHtml(state) {
   const isCashier = state.currentUser.role === 'CASHIER';
@@ -203,7 +228,10 @@ export async function renderReports(ctx) {
         description: state.currentUser.role === 'CASHIER'
           ? 'Limited cashier reporting: your own daily sales and sales history. Cost and valuation reports are administrator-only.'
           : 'Daily sales, history, inventory valuation, low stock, movements, and purchasing reports from the shop server.',
-        actions: `<button class="btn btn--secondary" type="button" data-print-report>${icon('print', 16)} Print report</button>`,
+        actions: `${can(state.currentUser, 'exportReports') ? `
+          <button class="btn btn--secondary" type="button" data-export-report="xlsx">${icon('download', 16)} Export Excel</button>
+          <button class="btn btn--secondary" type="button" data-export-report="pdf">${icon('download', 16)} Export PDF</button>
+        ` : ''}<button class="btn btn--secondary" type="button" data-print-report>${icon('print', 16)} Print report</button>`,
       })}
       <div class="toolbar toolbar--wrap">
         <label class="filter-field"><span>From</span><input id="report-from" type="date" value="${escapeHtml(filters.from)}"></label>
@@ -253,6 +281,25 @@ export async function renderReports(ctx) {
         if (!filter) return;
         filters[filter.dataset.reportFilter] = filter.value;
         content.innerHTML = contentHtml(state, currentData);
+      });
+      container.querySelectorAll('[data-export-report]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const format = button.dataset.exportReport;
+          const original = button.innerHTML;
+          button.disabled = true;
+          button.textContent = 'Preparing...';
+          try {
+            const filename = await downloadFile(exportUrl(activeTab, format), {
+              fallbackName: `autotrack-${activeTab}.${format}`,
+            });
+            toast(`${filename} downloaded.`, { tone: 'success', title: 'Export ready' });
+          } catch (error) {
+            toast(error.message, { tone: 'danger', title: 'Export failed' });
+          } finally {
+            button.disabled = false;
+            button.innerHTML = original;
+          }
+        });
       });
       container.querySelector('[data-print-report]').addEventListener('click', () => printPrototype('report'));
     },

@@ -92,9 +92,34 @@ npm audit --audit-level=high
 The backend suite uses `autotrack_test_mysql` and resets only that database. It refuses to
 run unless `TEST_DATABASE_URL` contains `autotrack_test`.
 
-Latest recorded result (2026-11-01, MySQL 8.4.13): **84/84 backend/browser tests
-passing**, 285 static UI checks, 45 client-logic checks. Re-run the commands above before
-trusting this record after any change.
+Latest recorded result (2026-11-06, MySQL 8.4.13): **88/88 backend/browser tests
+passing**, 285 static UI checks, 47 client-logic checks, and 0 `npm audit`
+vulnerabilities. Re-run the commands above before trusting this record after any change.
+
+## Report exports
+
+Administrators can export six report datasets from the Reports screen:
+
+| Dataset | Report | XLSX sheets |
+|---|---|---|
+| `daily` | Daily sales | Summary, Daily totals, Sales |
+| `sales` | Sales history | Summary, Sales, Sale lines, Payments, Returns, Return lines |
+| `inventory` | Inventory valuation / low stock | Valuation, Low stock |
+| `low-stock` | Low stock | Low stock |
+| `movements` | Stock movements | Movements |
+| `purchasing` | Purchasing | Summary, Purchase orders, Purchase lines |
+
+The endpoint is `GET /api/exports/:dataset/:format`, where `format` is `xlsx` or `pdf`.
+It is protected by the `reports:export` permission and returns the file directly; the
+browser never receives a database connection or SQL. The current report filters are
+applied where the dataset supports them. Files are generated in memory and are not
+stored by the app.
+
+Every successful export writes a `REPORT_EXPORTED` audit row with the dataset, format,
+filters, row count, filename, and source IP. Cashiers receive `403` from the export
+endpoint and see no export controls. Export files contain cost, valuation, sales, and
+staff data; store downloaded copies as sensitive shop records and delete them when no
+longer needed. The public static demo hides export controls because it has no server.
 
 ## Backup
 

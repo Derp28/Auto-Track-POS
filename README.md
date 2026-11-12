@@ -16,8 +16,17 @@ loopback; the browser never connects to it.
 ## Status
 
 - UI and backend behavior are at parity with the Stage 2 PostgreSQL release.
-- MySQL port verification on 2026-10-31/11-01: **84/84 backend and browser tests pass**,
-  plus **285 static UI checks** and **45 client logic checks**.
+- Verification on 2026-11-12: **91/91 backend and browser tests pass with `MYSQL_BIN`
+  set** to the portable MySQL `bin` directory (90/91 in a shell without it, because the
+  deployment test cannot find `mysqldump`), plus **285 static UI checks** and **47 client
+  logic checks**; `npm audit` reports 0 vulnerabilities.
+- Administrator report exports are generated on the server as XLSX or PDF; cashiers
+  cannot see the controls or call the endpoints.
+- The administrator dashboard adds target pace, same-period comparisons, sales trends,
+  product mix, and an operating-expense ledger. Cashiers keep the own-sales dashboard.
+- The static GitHub Pages demo in `docs/demo/` uses an in-memory sample shop. It mirrors
+  the dashboard insights and expense ledger, seeds historical comparison sales and a
+  sample monthly target, and saves nothing across reloads.
 - Local self-hosted operation on `127.0.0.1` is the supported mode.
 - LAN/TLS deployment, production recovery drills, and GATE-3 are **not** done.
 - **Not production-ready.** Do not use it for live money or stock without an operator
@@ -27,6 +36,11 @@ loopback; the browser never connects to it.
 
 - **Checkout** - barcode/SKU search, per-line percentage discounts, cash and external
   card (terminal reference only), atomic sale commits, idempotent retries.
+- **Dashboard** - KPI-first administrator view with monthly sales target pace,
+  month-to-date versus the same days last month, year-to-date versus the same period last
+  year, a monthly/yearly net-sales trend, top-product revenue mix, and current-month
+  expenses. Manual operating expenses are admin-only and separate from received
+  purchase-order inventory purchases. Cashiers see only their own daily summary.
 - **Inventory** - stock on hand, weighted-average cost derived from `stock_value_cents`,
   receiving, adjustments, movements history, low-stock and valuation reports.
 - **Returns and voids** - separate documents, proportional or exact cost restoration,
@@ -34,9 +48,15 @@ loopback; the browser never connects to it.
 - **Receipts** - 80 mm browser print or an in-browser PDF download; each reprint is
   audited.
 - **Purchasing** - suppliers, purchase orders, partial receipts.
+- **Reports and exports** - daily sales, sales history, inventory valuation, low stock,
+  stock movements, and purchasing reports. Administrators can download XLSX or PDF
+  versions from the report screen; each export is server-generated and audited.
+  Cashiers see limited reports with no cost, valuation, or export controls.
 - **Catalog** - categories, products, prices, costs, reorder levels.
 - **Users and roles** - `ADMIN` and `CASHIER` with a server-enforced permission matrix.
-  Cashiers see only their own sales and never see cost or stock value.
+  Cashiers see only their own sales and never see shop-wide insights, cost, stock value,
+  or operating expenses. Administrators set the monthly sales target and choose monthly
+  or yearly comparison mode in Settings.
 - **Audit** - append-only `audit_log` and `stock_movements`, MySQL triggers, and a
   least-privilege runtime role.
 - **Backup/restore** - `mysqldump` backup with SHA-256 manifest and a restore script that
@@ -119,8 +139,8 @@ Database role creation and time-zone loading are covered in
 
 ```bash
 node scripts/check-ui.mjs      # static UI checks (285)
-node scripts/test-ui.mjs       # client logic checks (45)
-npm test                       # backend/browser suite (84 tests, needs autotrack_test_mysql)
+node scripts/test-ui.mjs       # client logic checks (47)
+npm test                       # backend/browser suite (88 tests, needs autotrack_test_mysql)
 ```
 
 If `mysqldump` is not on `PATH`, set `MYSQL_BIN` to the MySQL `bin` directory before
