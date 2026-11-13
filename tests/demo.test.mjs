@@ -16,6 +16,7 @@ test('the static demo mirrors dashboard insights, expenses, and settings', () =>
   assert.equal(adminDashboard.insights.comparison.mode, 'monthly');
   assert.ok(adminDashboard.insights.comparison.currentCents > 0);
   assert.ok(adminDashboard.insights.comparison.previousCents > 0);
+  assert.ok(adminDashboard.insights.monthComparison.changePct > 0);
   assert.equal(adminDashboard.insights.target.isSet, true);
   assert.ok(adminDashboard.insights.target.progressPct > 0);
   assert.equal(adminDashboard.insights.trend.points.length, 6);
@@ -24,6 +25,8 @@ test('the static demo mirrors dashboard insights, expenses, and settings', () =>
   assert.equal(adminDashboard.insights.expenses.manualCount, 4);
   assert.equal(adminDashboard.insights.expenses.purchaseCount, 2);
   assert.ok(adminDashboard.insights.expenses.purchaseCents > 0);
+  assert.ok(adminDashboard.insights.expenses.previousTotalCents > 0);
+  assert.ok(adminDashboard.insights.expenses.changePct > 0);
   assert.ok(adminDashboard.insights.expenses.purchaseReceipts.every((receipt) => receipt.receiptDate.startsWith('2026-11')));
   assert.equal(cashierDashboard.insights, null);
 

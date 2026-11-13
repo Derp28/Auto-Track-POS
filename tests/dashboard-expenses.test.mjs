@@ -108,6 +108,12 @@ test('administrator dashboard insights use the target, comparison mode, and expe
   assert.equal(report.insights.comparison.currentCents, 10000);
   assert.equal(report.insights.comparison.previousCents, 5000);
   assert.equal(report.insights.comparison.changePct, 100);
+  assert.equal(report.insights.monthComparison.currentCents, 10000);
+  assert.equal(report.insights.monthComparison.previousCents, 5000);
+  assert.equal(report.insights.monthComparison.changePct, 100);
+  assert.equal(report.insights.expenses.previousTotalCents, 0);
+  assert.equal(report.insights.expenses.changeCents, 0);
+  assert.equal(report.insights.expenses.changePct, 0);
   assert.equal(report.insights.trend.points.length, 6);
   assert.equal(report.insights.trend.points.at(-1).valueCents, 10000);
   assert.equal(report.insights.trend.points.at(-2).valueCents, 5000);
@@ -158,6 +164,9 @@ test('administrator dashboard insights use the target, comparison mode, and expe
   assert.equal(withExpense.insights.expenses.manualCents, 1250);
   assert.equal(withExpense.insights.expenses.manualCount, 1);
   assert.equal(withExpense.insights.expenses.totalCents, 1250);
+  assert.equal(withExpense.insights.expenses.previousTotalCents, 0);
+  assert.equal(withExpense.insights.expenses.changeCents, 1250);
+  assert.equal(withExpense.insights.expenses.changePct, null);
   assert.equal(withExpense.insights.expenses.salesAfterOutflowsCents, 8750);
 
   const edited = await api(base, 'PUT', `/api/expenses/${created.body.id}`, {
@@ -215,7 +224,10 @@ test('administrator dashboard insights use the target, comparison mode, and expe
   assertStatus(withDeleted, 200);
   assert.equal(withDeleted.body.length, 1);
   assert.ok(withDeleted.body[0].deletedAt);
-  assert.equal((await dashboard(admin)).insights.expenses.manualCents, 0);
+  const afterDeleteReport = await dashboard(admin);
+  assert.equal(afterDeleteReport.insights.expenses.manualCents, 0);
+  assert.equal(afterDeleteReport.insights.expenses.changeCents, 0);
+  assert.equal(afterDeleteReport.insights.expenses.changePct, 0);
 
   const audit = await ctx.owner.query(
     "SELECT action FROM audit_log WHERE entity_type = 'expense' AND entity_id = $1 ORDER BY id",
@@ -287,6 +299,9 @@ test('dashboard expenses include received purchase-order receipts and not draft 
   assert.equal(report.insights.expenses.purchaseCents, 10000);
   assert.equal(report.insights.expenses.purchaseCount, 1);
   assert.equal(report.insights.expenses.totalCents, 10000);
+  assert.equal(report.insights.expenses.previousTotalCents, 0);
+  assert.equal(report.insights.expenses.changeCents, 10000);
+  assert.equal(report.insights.expenses.changePct, null);
   assert.equal(report.insights.expenses.purchaseReceipts[0].number, received.body.number);
   assert.equal(report.insights.expenses.purchaseReceipts[0].purchaseOrderNumber, po.number);
   assert.equal(report.insights.expenses.purchaseReceipts[0].supplierName, 'Dashboard Supply');

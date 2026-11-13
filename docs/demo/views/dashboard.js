@@ -73,7 +73,42 @@ function changeTone(value) {
   return 'muted';
 }
 
-function kpiCard({ label, value, hint = '', iconName = '', tone = '', extra = '' }) {
+function comparisonDirection(currentCents, previousCents) {
+  const current = Number(currentCents) || 0;
+  const previous = Number(previousCents) || 0;
+  if (current > previous) return 'up';
+  if (current < previous) return 'down';
+  return 'flat';
+}
+
+function comparisonTone(direction, inverse = false) {
+  if (direction === 'flat') return '';
+  return (direction === 'up') !== inverse ? 'success' : 'danger';
+}
+
+function trendIndicator({
+  currentCents,
+  previousCents,
+  changePct,
+  inverse = false,
+  periodLabel = 'vs last month',
+}) {
+  const direction = comparisonDirection(currentCents, previousCents);
+  const tone = comparisonTone(direction, inverse) || 'muted';
+  const iconName = direction === 'up' ? 'arrowUp' : direction === 'down' ? 'arrowDown' : 'minus';
+  const changeLabel = changePct === null || changePct === undefined
+    ? (direction === 'up' ? 'New' : direction === 'down' ? 'Lower' : 'No change')
+    : formatPercent(changePct);
+  return `
+    <span class="insight-kpi__trend insight-kpi__trend--${tone}" title="${escapeHtml(`${changeLabel} ${periodLabel}`)}">
+      ${icon(iconName, 13)}
+      <strong>${escapeHtml(changeLabel)}</strong>
+      <small>${escapeHtml(periodLabel)}</small>
+    </span>
+  `;
+}
+
+function kpiCard({ label, value, hint = '', iconName = '', tone = '', trend = null, extra = '' }) {
   return `
     <article class="insight-kpi ${tone ? `insight-kpi--${tone}` : ''}">
       <div class="insight-kpi__top">
@@ -81,6 +116,7 @@ function kpiCard({ label, value, hint = '', iconName = '', tone = '', extra = ''
         ${iconName ? `<span class="insight-kpi__icon">${icon(iconName, 17)}</span>` : ''}
       </div>
       <strong class="insight-kpi__value">${escapeHtml(value)}</strong>
+      ${trend ? trendIndicator(trend) : ''}
       ${hint ? `<span class="insight-kpi__hint">${escapeHtml(hint)}</span>` : ''}
       ${extra}
     </article>
@@ -122,6 +158,28 @@ function targetKpi(target) {
 function kpiRow(insights) {
   const comparison = insights.comparison;
   const expenses = insights.expenses;
+  const monthComparison = insights.monthComparison
+    || (comparison.mode === 'monthly' ? comparison : null);
+  const netTrend = monthComparison ? {
+    currentCents: monthComparison.currentCents,
+    previousCents: monthComparison.previousCents,
+    changePct: monthComparison.changePct,
+    periodLabel: 'vs last month',
+  } : null;
+  const netTone = netTrend
+    ? comparisonTone(comparisonDirection(netTrend.currentCents, netTrend.previousCents)) || 'accent'
+    : 'accent';
+  const hasExpenseComparison = expenses.previousTotalCents !== null && expenses.previousTotalCents !== undefined;
+  const expenseTrend = hasExpenseComparison ? {
+    currentCents: expenses.totalCents,
+    previousCents: expenses.previousTotalCents,
+    changePct: expenses.changePct,
+    inverse: true,
+    periodLabel: 'vs last month',
+  } : null;
+  const expenseTone = expenseTrend
+    ? comparisonTone(comparisonDirection(expenseTrend.currentCents, expenseTrend.previousCents), true) || 'warning'
+    : (expenses.totalCents ? 'warning' : '');
   const comparisonValue = comparison.changePct === null ? 'No prior sales' : formatPercent(comparison.changePct);
   const comparisonHint = comparison.previousCents
     ? `${money(comparison.previousCents)} previous period`
@@ -133,7 +191,8 @@ function kpiRow(insights) {
         value: money(insights.target.monthNetCents),
         hint: insights.target.rangeLabel,
         iconName: 'cash',
-        tone: 'accent',
+        tone: netTone,
+        trend: netTrend,
       })}
       ${targetKpi(insights.target)}
       ${kpiCard({
@@ -149,7 +208,8 @@ function kpiRow(insights) {
         value: money(expenses.totalCents),
         hint: `${money(expenses.manualCents)} operating · ${money(expenses.purchaseCents)} inventory`,
         iconName: 'receipt',
-        tone: expenses.totalCents ? 'warning' : '',
+        tone: expenseTone,
+        trend: expenseTrend,
       })}
     </section>
   `;

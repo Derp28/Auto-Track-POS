@@ -39,6 +39,8 @@ export function icon(name, size = 18) {
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
     arrowLeft: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
     arrowRight: '<path d="M5 12h14M12 5l7 7-7 7"/>',
+    arrowUp: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+    arrowDown: '<path d="M12 5v14M5 12l7 7 7-7"/>',
     chevronDown: '<path d="M6 9l6 6 6-6"/>',
     refresh: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.6-2.4L20 9M4 15l2.3 2.4A7 7 0 0 0 18 15"/>',
     filter: '<path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"/>',

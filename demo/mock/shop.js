@@ -127,6 +127,11 @@ function percentage(value, total) {
   return total ? Math.round((value / total) * 1000) / 10 : 0;
 }
 
+function changePercentage(current, previous) {
+  if (!previous) return current ? null : 0;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
+}
+
 function expenseDto(expense) {
   return {
     id: String(expense.id),
@@ -285,9 +290,10 @@ function dashboardInsights(state, businessDate) {
   const previousWindow = mode === 'yearly' ? previousYear : previousMonth;
   const monthNet = periodNetCents(state, currentMonth.from, currentMonth.to);
   const currentNet = mode === 'yearly' ? periodNetCents(state, currentYear.from, currentYear.to) : monthNet;
+  const previousMonthNet = periodNetCents(state, previousMonth.from, previousMonth.to);
   const previousNet = mode === 'yearly'
     ? periodNetCents(state, previousYear.from, previousYear.to)
-    : periodNetCents(state, previousMonth.from, previousMonth.to);
+    : previousMonthNet;
   const trendPoints = trendSeries(mode, businessDate).map((point) => ({
     ...point,
     valueCents: periodNetCents(state, point.from, point.to),
@@ -302,12 +308,21 @@ function dashboardInsights(state, businessDate) {
     totalCents: manualRows.reduce((sum, expense) => sum + expense.amountCents, 0),
     count: manualRows.length,
   };
+  const previousManualCents = state.expenses
+    .filter((expense) => !expense.deletedAt
+      && expense.expenseDate >= previousMonth.from
+      && expense.expenseDate <= previousMonth.to)
+    .reduce((sum, expense) => sum + expense.amountCents, 0);
   const topProducts = topProductInsights(state, {
     from: currentMonth.from,
     to: currentMonth.to,
     totalCents: monthNet,
   });
   const purchaseOrders = purchaseOrderInsights(state, { from: currentMonth.from, to: currentMonth.to });
+  const previousPurchaseOrders = purchaseOrderInsights(state, {
+    from: previousMonth.from,
+    to: previousMonth.to,
+  });
   const elapsedDays = currentMonth.day;
   const totalDays = daysInMonth(currentMonth.year, currentMonth.month);
   const expectedProgressPct = Math.round((elapsedDays / totalDays) * 1000) / 10;
@@ -315,10 +330,10 @@ function dashboardInsights(state, businessDate) {
   const progressPct = rawProgressPct === null ? null : Math.max(0, rawProgressPct);
   const targetSet = targetCents > 0;
   const paceDeltaPct = targetSet ? Math.round((progressPct - expectedProgressPct) * 10) / 10 : null;
-  const changePct = previousNet === 0
-    ? (currentNet === 0 ? 0 : null)
-    : Math.round(((currentNet - previousNet) / previousNet) * 1000) / 10;
+  const changePct = changePercentage(currentNet, previousNet);
   const totalOutflowsCents = manualTotals.totalCents + purchaseOrders.totalCents;
+  const previousTotalOutflowsCents = previousManualCents + previousPurchaseOrders.totalCents;
+  const expenseChangePct = changePercentage(totalOutflowsCents, previousTotalOutflowsCents);
 
   return {
     target: {
@@ -346,6 +361,13 @@ function dashboardInsights(state, businessDate) {
       previousLabel: previousWindow.label,
       periodLabel: mode === 'yearly' ? 'vs same period last year' : 'vs same period last month',
     },
+    monthComparison: {
+      currentCents: monthNet,
+      previousCents: previousMonthNet,
+      changeCents: monthNet - previousMonthNet,
+      changePct: changePercentage(monthNet, previousMonthNet),
+      periodLabel: 'vs same period last month',
+    },
     trend: {
       mode,
       points: trendPoints,
@@ -358,6 +380,10 @@ function dashboardInsights(state, businessDate) {
       purchaseCents: purchaseOrders.totalCents,
       purchaseCount: purchaseOrders.count,
       totalCents: totalOutflowsCents,
+      previousTotalCents: previousTotalOutflowsCents,
+      changeCents: totalOutflowsCents - previousTotalOutflowsCents,
+      changePct: expenseChangePct,
+      comparisonLabel: 'vs same period last month',
       salesAfterOutflowsCents: monthNet - totalOutflowsCents,
       manual: manualRows.slice(0, 5).map(expenseDto),
       purchaseReceipts: purchaseOrders.receipts,

@@ -101,6 +101,11 @@ function percentage(value, total) {
   return Math.round((value / total) * 1000) / 10;
 }
 
+function changePercentage(current, previous) {
+  if (!previous) return current ? null : 0;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
+}
+
 function trendSeries(mode, businessDate) {
   const current = parseDate(businessDate);
   if (mode === 'yearly') {
@@ -273,12 +278,22 @@ export async function buildDashboardInsights({ businessDate }) {
   const previousNet = mode === 'yearly' ? previousYearNet : previousMonthNet;
 
   const series = trendSeries(mode, businessDate);
-  const [trendPoints, topProducts, manualTotals, manualExpenses, purchaseOrders] = await Promise.all([
+  const [
+    trendPoints,
+    topProducts,
+    manualTotals,
+    manualExpenses,
+    purchaseOrders,
+    previousManualTotals,
+    previousPurchaseOrders,
+  ] = await Promise.all([
     trendValues(series, mode),
     topProductInsights({ from: currentMonth.from, to: currentMonth.to, totalCents: monthNet }),
     expenseTotals({ from: currentMonth.from, to: currentMonth.to }),
     listExpenses({ from: currentMonth.from, to: currentMonth.to, limit: 5 }),
     purchaseOrderInsights({ from: currentMonth.from, to: currentMonth.to }),
+    expenseTotals({ from: previousMonth.from, to: previousMonth.to }),
+    purchaseOrderInsights({ from: previousMonth.from, to: previousMonth.to }),
   ]);
 
   const elapsedDays = currentMonth.day;
@@ -288,10 +303,10 @@ export async function buildDashboardInsights({ businessDate }) {
   const progressPct = rawProgressPct === null ? null : Math.max(0, rawProgressPct);
   const targetSet = targetCents > 0;
   const paceDeltaPct = targetSet ? Math.round((progressPct - expectedProgressPct) * 10) / 10 : null;
-  const changePct = previousNet === 0
-    ? (currentNet === 0 ? 0 : null)
-    : Math.round(((currentNet - previousNet) / previousNet) * 1000) / 10;
+  const changePct = changePercentage(currentNet, previousNet);
   const totalOutflowsCents = manualTotals.totalCents + purchaseOrders.totalCents;
+  const previousTotalOutflowsCents = previousManualTotals.totalCents + previousPurchaseOrders.totalCents;
+  const expenseChangePct = changePercentage(totalOutflowsCents, previousTotalOutflowsCents);
 
   return {
     target: {
@@ -319,6 +334,13 @@ export async function buildDashboardInsights({ businessDate }) {
       previousLabel: previousWindow.label,
       periodLabel: mode === 'yearly' ? 'vs same period last year' : 'vs same period last month',
     },
+    monthComparison: {
+      currentCents: monthNet,
+      previousCents: previousMonthNet,
+      changeCents: monthNet - previousMonthNet,
+      changePct: changePercentage(monthNet, previousMonthNet),
+      periodLabel: 'vs same period last month',
+    },
     trend: {
       mode,
       points: trendPoints,
@@ -331,6 +353,10 @@ export async function buildDashboardInsights({ businessDate }) {
       purchaseCents: purchaseOrders.totalCents,
       purchaseCount: purchaseOrders.count,
       totalCents: totalOutflowsCents,
+      previousTotalCents: previousTotalOutflowsCents,
+      changeCents: totalOutflowsCents - previousTotalOutflowsCents,
+      changePct: expenseChangePct,
+      comparisonLabel: 'vs same period last month',
       salesAfterOutflowsCents: monthNet - totalOutflowsCents,
       manual: manualExpenses,
       purchaseReceipts: purchaseOrders.receipts,

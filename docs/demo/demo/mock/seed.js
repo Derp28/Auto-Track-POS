@@ -159,6 +159,11 @@ export function createDemoShop(now = new Date()) {
     now.getMonth() - 1,
     Math.min(now.getDate(), 6),
   ), hours, minutes);
+  const previousMonthDayAt = (day, hours = 0, minutes = 5) => atTime(new Date(
+    now.getFullYear(),
+    now.getMonth() - 1,
+    Math.min(day, now.getDate(), 6),
+  ), hours, minutes);
   const previousYearAt = (hours, minutes = 0) => atTime(new Date(
     now.getFullYear() - 1,
     now.getMonth(),
@@ -459,6 +464,23 @@ export function createDemoShop(now = new Date()) {
     actor: admin,
     reason: 'Wrong item keyed at the counter — replaced with the correct part.',
   });
+
+  // Prior-month expenses give the dashboard expense comparison a real baseline.
+  // Dates stay inside the previous month and never move into the future.
+  for (const expense of [
+    { day: 1, category: 'Rent', description: 'Previous-month counter and stockroom rent', amountCents: 1200000, paidVia: 'BANK_TRANSFER' },
+    { day: 3, category: 'Utilities', description: 'Previous-month electricity and water', amountCents: 380000, paidVia: 'CASH' },
+    { day: 5, category: 'Supplies', description: 'Previous-month receipt paper and counter supplies', amountCents: 125000, paidVia: 'CASH' },
+    { day: 6, category: 'Transport', description: 'Previous-month parts pickup', amountCents: 65000, paidVia: 'CASH' },
+  ]) {
+    shop.createExpense({
+      expenseDate: dateString(previousMonthDayAt(expense.day)),
+      category: expense.category,
+      description: expense.description,
+      amountCents: expense.amountCents,
+      paidVia: expense.paidVia,
+    }, admin, previousMonthDayAt(expense.day));
+  }
 
   // Operating expenses. Dates stay inside the current month and never move
   // into the future when the demo is opened early in the month.
