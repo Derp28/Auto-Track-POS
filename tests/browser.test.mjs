@@ -176,7 +176,7 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
       const node = document.querySelector('.nav-tooltip');
       return node && !node.hidden && getComputedStyle(node).visibility === 'visible';
     });
-    assert.equal((await tooltip.innerText()).trim(), 'This displays data about your store');
+    assert.equal((await tooltip.innerText()).trim(), "See today's sales, targets, and stock health");
     const box = await tooltip.boundingBox();
     const viewport = adminPage.viewportSize();
     assert.ok(
@@ -189,7 +189,7 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
     );
 
     const expectedHelp = [
-      ['#/dashboard', 'This displays data about your store'],
+      ['#/dashboard', "See today's sales, targets, and stock health"],
       ['#/checkout', 'Search parts and take payment'],
       ['#/sales', 'Review shop sales, returns, and voids'],
       ['#/catalog', 'Prices, stock, and categories'],
@@ -214,7 +214,7 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
       const node = document.querySelector('.nav-tooltip');
       return node && !node.hidden && getComputedStyle(node).visibility === 'visible';
     });
-    assert.equal((await tooltip.innerText()).trim(), 'This displays data about your store');
+    assert.equal((await tooltip.innerText()).trim(), "See today's sales, targets, and stock health");
   });
 
   await t.test('cashier login forces a password change and completes a confirmed sale', async () => {
@@ -238,6 +238,9 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
     assert.equal(await cashierPage.locator('.scope-strip, .quick-action, .quick-actions').count(), 0);
     assert.equal(await cashierPage.locator('.nav-link[href="#/purchasing"]').count(), 0);
     assert.equal(await cashierPage.locator('.nav-link[href="#/users"]').count(), 0);
+    assert.equal(await cashierPage.locator('.nav-link[href="#/dashboard"]').getAttribute('data-nav-help'), 'See your sales and recent counter activity');
+    await cashierPage.locator('.nav-link[href="#/dashboard"]').hover();
+    await cashierPage.waitForFunction(() => document.querySelector('.nav-tooltip')?.textContent === 'See your sales and recent counter activity');
     assert.equal(await cashierPage.locator('.nav-link[href="#/reports"]').getAttribute('data-nav-help'), 'Your daily sales and sales history');
     assert.equal(await cashierPage.locator('.nav-link[href="#/inventory"]').getAttribute('data-nav-help'), 'Read-only stock levels and movement history');
     await cashierPage.locator('.nav-link[href="#/reports"]').hover();

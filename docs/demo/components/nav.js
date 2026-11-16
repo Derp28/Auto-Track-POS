@@ -10,7 +10,8 @@ const GROUPS = [
         label: 'Dashboard',
         iconName: 'dashboard',
         action: 'viewDashboard',
-        description: 'This displays data about your store',
+        description: "See today's sales, targets, and stock health",
+        cashierDescription: 'See your sales and recent counter activity',
       },
       {
         path: '/checkout',

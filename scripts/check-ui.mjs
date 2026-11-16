@@ -124,7 +124,7 @@ check('removed dashboard scope and quick-action styles', !appCss.includes('.scop
 
 const navSource = sources.get(join(publicDir, 'components', 'nav.js'));
 const navDescriptions = [
-  ['dashboard', 'This displays data about your store'],
+  ['dashboard', "See today's sales, targets, and stock health"],
   ['checkout', 'Search parts and take payment'],
   ['sales', 'Review shop sales, returns, and voids'],
   ['catalog', 'Prices, stock, and categories'],
@@ -138,12 +138,14 @@ const navDescriptions = [
 for (const [path, description] of navDescriptions) {
   check(
     `sidebar help description: ${path}`,
-    navSource.includes(`path: '/${path}'`) && navSource.includes(`description: '${description}'`),
+    navSource.includes(`path: '/${path}'`)
+      && (navSource.includes(`description: '${description}'`) || navSource.includes(`description: "${description}"`)),
   );
 }
 check(
   'sidebar help keeps cashier tab copy role-safe',
-  navSource.includes("cashierDescription: 'Review your sales, returns, and voids'")
+  navSource.includes("cashierDescription: 'See your sales and recent counter activity'")
+    && navSource.includes("cashierDescription: 'Review your sales, returns, and voids'")
     && navSource.includes("cashierDescription: 'Read-only stock levels and movement history'")
     && navSource.includes("cashierDescription: 'Your daily sales and sales history'"),
 );
