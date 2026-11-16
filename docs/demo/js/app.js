@@ -2,7 +2,7 @@ import { createApiStore } from './api-store.js';
 import { createAppState } from './state.js';
 import { roleLabel } from './permissions.js';
 import { escapeHtml, icon } from './ui.js';
-import { renderNav } from '../components/nav.js';
+import { bindNavHelp, hideNavHelp, renderNav } from '../components/nav.js';
 import { confirmDialog, showDialog } from '../components/dialog.js';
 import { toast } from '../components/toast.js';
 import { logout, me, onUnauthorized, setupStatus } from './api.js';
@@ -20,6 +20,7 @@ const sidebar = document.querySelector('#app-sidebar');
 const topbar = document.querySelector('#app-topbar');
 const main = document.querySelector('#main-content');
 const banner = document.querySelector('#connection-banner');
+bindNavHelp(sidebar);
 let lastChromeRoute = { path: '/dashboard', query: {}, route: { title: 'Dashboard' } };
 let booted = false;
 const bootRequestedPath = (location.hash.replace(/^#/, '').split('?')[0] || '/dashboard');
@@ -36,6 +37,7 @@ export function showBootMessage(message) {
 }
 
 function setNavOpen(open) {
+  if (!open) hideNavHelp();
   document.body.classList.toggle('nav-open', open);
   const menuButton = topbar.querySelector('[data-nav-toggle]');
   menuButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -56,6 +58,7 @@ function loginTopbar() {
 
 function renderChrome(routeInfo) {
   lastChromeRoute = routeInfo;
+  hideNavHelp();
   const user = state.currentUser;
   const loggedOut = !user;
   document.body.classList.toggle('is-logged-out', loggedOut);

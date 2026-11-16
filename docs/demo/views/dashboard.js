@@ -629,38 +629,12 @@ export function renderDashboard(ctx) {
   const taxHint = settings.taxEnabled
     ? `${formatPercentFromBps(settings.taxRateBps)} ${settings.taxInclusive ? 'inclusive' : 'exclusive'}`
     : 'Tax disabled in settings';
-  const scopeChip = isCashier
-    ? badge('Cashier · own sales', 'warning')
-    : badge('Administrator · shop-wide', 'accent');
-
   return {
     html: `
       ${header}
-      <section class="scope-strip" aria-label="Current data scope">
-        <div class="scope-strip__main">
-          <span class="scope-strip__icon">${icon(isCashier ? 'lock' : 'store', 18)}</span>
-          <p><strong>${escapeHtml(data.scopeLabel)}</strong><span>${isCashier ? 'Only sales recorded under your account are shown. Cost and inventory value are hidden.' : 'All counters, users, and stock data are visible to administrators.'}</span></p>
-        </div>
-        <div class="scope-strip__meta">
-          ${scopeChip}
-          <span>Clock: ${formatDateTime(state.store.meta.clockIso, settings.timezone)}</span>
-        </div>
-      </section>
 
       ${!isCashier && insights ? kpiRow(insights) : ''}
       ${!isCashier && !insights ? `<div class="callout callout--warning">${icon('alert', 17)} <span>Performance insights were not included in the demo response. Reload the demo to try again.</span></div>` : ''}
-
-      <div class="quick-actions" aria-label="Quick actions">
-        <a class="quick-action" href="#/checkout" data-nav><span>${icon('cart', 20)}</span><strong>Start a sale</strong><small>Search parts and take payment</small></a>
-        <a class="quick-action" href="#/catalog" data-nav><span>${icon('box', 20)}</span><strong>Browse catalog</strong><small>Prices, stock, and categories</small></a>
-        ${isCashier ? `
-          <a class="quick-action" href="#/reports" data-nav><span>${icon('chart', 20)}</span><strong>My daily summary</strong><small>Limited cashier reporting</small></a>
-          <a class="quick-action" href="#/inventory" data-nav><span>${icon('layers', 20)}</span><strong>Check stock</strong><small>Read-only inventory view</small></a>
-        ` : `
-          <a class="quick-action" href="#/purchasing" data-nav><span>${icon('truck', 20)}</span><strong>Receive stock</strong><small>Open purchase orders and suppliers</small></a>
-          <a class="quick-action" href="#/reports" data-nav><span>${icon('chart', 20)}</span><strong>Review reports</strong><small>Daily sales, valuation, and movements</small></a>
-        `}
-      </div>
 
       ${!isCashier && insights ? performanceSection(insights, settings) : ''}
 

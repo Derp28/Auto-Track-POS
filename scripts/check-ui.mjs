@@ -119,6 +119,39 @@ check('80 mm receipt layout exists', appCss.includes('width: 80mm'));
 check('print stylesheet exists', appCss.includes('@media print'));
 check('receipt and report print modes are separated', appCss.includes('body.print-receipt') && appCss.includes('body.print-report'));
 check('reduced-motion support exists', appCss.includes('prefers-reduced-motion'));
+check('sidebar help tooltip styles exist', appCss.includes('.nav-tooltip') && appCss.includes('.nav-tooltip.is-visible'));
+check('removed dashboard scope and quick-action styles', !appCss.includes('.scope-strip') && !appCss.includes('.quick-action'));
+
+const navSource = sources.get(join(publicDir, 'components', 'nav.js'));
+const navDescriptions = [
+  ['dashboard', 'This displays data about your store'],
+  ['checkout', 'Search parts and take payment'],
+  ['sales', 'Review shop sales, returns, and voids'],
+  ['catalog', 'Prices, stock, and categories'],
+  ['inventory', 'Check stock levels and record adjustments'],
+  ['purchasing', 'Open purchase orders and suppliers'],
+  ['reports', 'Daily sales, valuation, and movements'],
+  ['users', 'Manage accounts, roles, and access'],
+  ['settings', 'Shop details, tax, receipts, and targets'],
+  ['system', 'Database health, backups, and versions'],
+];
+for (const [path, description] of navDescriptions) {
+  check(
+    `sidebar help description: ${path}`,
+    navSource.includes(`path: '/${path}'`) && navSource.includes(`description: '${description}'`),
+  );
+}
+check(
+  'sidebar help keeps cashier tab copy role-safe',
+  navSource.includes("cashierDescription: 'Review your sales, returns, and voids'")
+    && navSource.includes("cashierDescription: 'Read-only stock levels and movement history'")
+    && navSource.includes("cashierDescription: 'Your daily sales and sales history'"),
+);
+const dashboardSource = sources.get(join(publicDir, 'views', 'dashboard.js'));
+check('dashboard omits the current data-scope strip', !dashboardSource.includes('scope-strip') && !dashboardSource.includes('scopeChip'));
+check('dashboard omits the quick-action cards', !dashboardSource.includes('quick-actions') && !dashboardSource.includes('Start a sale'));
+const appSource = sources.get(join(publicDir, 'js', 'app.js'));
+check('app binds sidebar help and clears it on navigation', appSource.includes('bindNavHelp(sidebar)') && appSource.includes('hideNavHelp()'));
 
 const packageJson = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 check('test script runs files sequentially with a quoted glob', packageJson.scripts?.test === 'node --test --test-concurrency=1 "tests/*.test.mjs"');

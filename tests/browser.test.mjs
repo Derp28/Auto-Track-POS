@@ -160,6 +160,63 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
     }
   });
 
+  await t.test('dashboard shortcuts are removed and sidebar tabs explain their purpose', async () => {
+    await adminPage.setViewportSize({ width: 1280, height: 900 });
+    await adminPage.goto(`${server.base}/#/dashboard`, { waitUntil: 'domcontentloaded' });
+    await waitForHash(adminPage, '#/dashboard');
+    await h1(adminPage);
+
+    assert.equal(await adminPage.locator('.scope-strip, .quick-action, .quick-actions').count(), 0);
+    assert.equal(await adminPage.getByText('Quick actions', { exact: true }).count(), 0);
+
+    const tooltip = adminPage.locator('.nav-tooltip');
+    const dashboardLink = adminPage.locator('.nav-link[href="#/dashboard"]');
+    await dashboardLink.hover();
+    await adminPage.waitForFunction(() => {
+      const node = document.querySelector('.nav-tooltip');
+      return node && !node.hidden && getComputedStyle(node).visibility === 'visible';
+    });
+    assert.equal((await tooltip.innerText()).trim(), 'This displays data about your store');
+    const box = await tooltip.boundingBox();
+    const viewport = adminPage.viewportSize();
+    assert.ok(
+      box
+        && box.x >= 0
+        && box.y >= 0
+        && box.x + box.width <= viewport.width + 1
+        && box.y + box.height <= viewport.height + 1,
+      'sidebar help tooltip stays inside the viewport',
+    );
+
+    const expectedHelp = [
+      ['#/dashboard', 'This displays data about your store'],
+      ['#/checkout', 'Search parts and take payment'],
+      ['#/sales', 'Review shop sales, returns, and voids'],
+      ['#/catalog', 'Prices, stock, and categories'],
+      ['#/inventory', 'Check stock levels and record adjustments'],
+      ['#/purchasing', 'Open purchase orders and suppliers'],
+      ['#/reports', 'Daily sales, valuation, and movements'],
+      ['#/users', 'Manage accounts, roles, and access'],
+      ['#/settings', 'Shop details, tax, receipts, and targets'],
+      ['#/system', 'Database health, backups, and versions'],
+    ];
+    for (const [hash, help] of expectedHelp) {
+      await adminPage.locator(`.nav-link[href="${hash}"]`).hover();
+      await adminPage.waitForFunction((text) => document.querySelector('.nav-tooltip')?.textContent === text, help);
+      assert.equal((await tooltip.innerText()).trim(), help, `sidebar help for ${hash}`);
+    }
+
+    await adminPage.mouse.move(700, 120);
+    await adminPage.waitForFunction(() => document.querySelector('.nav-tooltip')?.hidden === true);
+
+    await dashboardLink.focus();
+    await adminPage.waitForFunction(() => {
+      const node = document.querySelector('.nav-tooltip');
+      return node && !node.hidden && getComputedStyle(node).visibility === 'visible';
+    });
+    assert.equal((await tooltip.innerText()).trim(), 'This displays data about your store');
+  });
+
   await t.test('cashier login forces a password change and completes a confirmed sale', async () => {
     await cashierPage.goto(`${server.base}/#/login`, { waitUntil: 'domcontentloaded' });
     try {
@@ -178,6 +235,13 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
     await cashierPage.getByRole('button', { name: /Save password/ }).click();
     await waitForHash(cashierPage, '#/dashboard');
     assert.match(await h1(cashierPage), /Good (morning|afternoon|evening), Cashier|Shop dashboard/);
+    assert.equal(await cashierPage.locator('.scope-strip, .quick-action, .quick-actions').count(), 0);
+    assert.equal(await cashierPage.locator('.nav-link[href="#/purchasing"]').count(), 0);
+    assert.equal(await cashierPage.locator('.nav-link[href="#/users"]').count(), 0);
+    assert.equal(await cashierPage.locator('.nav-link[href="#/reports"]').getAttribute('data-nav-help'), 'Your daily sales and sales history');
+    assert.equal(await cashierPage.locator('.nav-link[href="#/inventory"]').getAttribute('data-nav-help'), 'Read-only stock levels and movement history');
+    await cashierPage.locator('.nav-link[href="#/reports"]').hover();
+    await cashierPage.waitForFunction(() => document.querySelector('.nav-tooltip')?.textContent === 'Your daily sales and sales history');
 
     await cashierPage.goto(`${server.base}/#/checkout`, { waitUntil: 'domcontentloaded' });
     await cashierPage.waitForSelector('#product-search');
