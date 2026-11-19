@@ -1,10 +1,10 @@
 ﻿# Auto-Track POS â€” LAN and TLS setup
 
-This guide describes the intended shop-LAN deployment. It is **deferred** while the
-user focuses on the self-hosted local website on `127.0.0.1`. The current implementation
-has been tested on one host only: TLS served on `0.0.0.0` and plain HTTP on a non-loopback
-address was refused. A second-machine client and the shop firewall have **not** been
-verified, so treat this as a setup procedure, not completed acceptance evidence.
+This guide describes the intended shop-LAN deployment for the GATE-3 MySQL target. The
+work is **active but not executed**; the current implementation has been tested on one
+host only: TLS served on `0.0.0.0` and plain HTTP on a non-loopback address was refused.
+A second-machine client and the shop firewall have **not** been verified, so treat this
+as a setup procedure, not completed acceptance evidence.
 
 ## Network rules
 
@@ -17,8 +17,9 @@ verified, so treat this as a setup procedure, not completed acceptance evidence.
 
 ## 1. Prepare the server address
 
-Choose a static address such as `192.168.1.20`. Confirm the shop server and client
-machines are on the same trusted subnet.
+Choose a static address such as `192.168.100.20` (example only; replace with the
+confirmed DHCP reservation). Confirm the shop server and client machines are on the same
+trusted subnet.
 
 ## 2. Create a TLS certificate
 
@@ -33,7 +34,7 @@ openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 365 `
   -keyout C:\AutoTrack\certs\server.key `
   -out C:\AutoTrack\certs\server.crt `
   -subj "/CN=autotrack-shop.local" `
-  -addext "subjectAltName=IP:192.168.1.20,DNS:autotrack-shop.local"
+  -addext "subjectAltName=IP:192.168.100.20,DNS:autotrack-shop.local"
 ```
 
 Protect the private key file. Do not commit it or copy it to client machines.
@@ -94,7 +95,7 @@ Do not create an inbound rule for `3307`. Verify:
 
 ```powershell
 Get-NetFirewallRule -DisplayName "Auto-Track POS HTTPS"
-Test-NetConnection 192.168.1.20 -Port 3100
+Test-NetConnection 192.168.100.20 -Port 3100
 ```
 
 ## 6. Client verification
@@ -103,14 +104,14 @@ On a second shop machine:
 
 1. Install/trust the shop CA certificate, or import the self-signed certificate into the
    trusted store.
-2. Open `https://192.168.1.20:3100/`.
+2. Open `https://192.168.100.20:3100/`.
 3. Confirm the certificate warning does not appear.
 4. Sign in as a cashier and complete a sale.
 5. Sign in as an administrator on another machine and confirm the sale, stock movement,
    and report appear.
 6. Confirm one machine cannot open the MySQL port:
    ```powershell
-   Test-NetConnection 192.168.1.20 -Port 3307
+   Test-NetConnection 192.168.100.20 -Port 3307
    ```
    `TcpTestSucceeded` must be `False`.
 

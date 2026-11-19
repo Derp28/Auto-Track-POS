@@ -1,11 +1,11 @@
 # Auto-Track POS - Stage 2 report (local MySQL edition)
 
-**Date:** 2026-11-01; report export addendum 2026-11-06
+**Date:** 2026-11-01; report export addendum 2026-11-06; GATE-3 target update 2026-11-19
 **Status:** Stage 2 backend and UI implementation complete. **GATE-2 passed.**
-**Variant:** local-only MySQL 8.4 LTS port on the `local-mysql` branch.
-**Current focus:** self-hosted local website with MySQL on the same machine.
-**GATE-3:** Deferred by user direction (LAN deployment, production recovery, and independent
-signoff). Not passed. Not production-ready.
+**Variant:** local-only MySQL 8.4 LTS port on the `local-mysql` branch; this is the GATE-3 target (D-052).
+**Current focus:** GATE-3 for the local-only MySQL build on `127.0.0.1:3307`.
+**GATE-3:** Active (LAN deployment, production recovery, and independent signoff).
+Not passed. Not production-ready.
 
 This report separates verified implementation from remaining gaps. It does not claim
 production readiness, and no unrun test is presented as passing.
@@ -150,9 +150,9 @@ persistence, TLS refusal, MySQL backup/restore, and report export content/access
 
 ## 4. Gaps and limitations
 
-### Deferred deployment and recovery gaps
+### Open GATE-3 deployment and recovery gaps
 
-These are not active work while the user focuses on the local self-hosted website:
+These are active GATE-3 work, not completed evidence:
 
 1. **No physical LAN pilot.** TLS was served on `0.0.0.0` and localhost was tested, but no
    second machine, trusted certificate, static address, or firewall rule has been verified.
@@ -195,16 +195,16 @@ apps are not part of this Stage 2 scope.
   admin-only access, audit logging, and demo control hiding are covered by tests.
 - Local self-hosted website workflows: verified on loopback with the isolated MySQL test
   database.
-- T-219 LAN pilot: deferred by user direction.
-- T-220 production restore drill: deferred; isolated MySQL test restore passed.
-- T-221 final signoff: deferred with GATE-3.
-- GATE-3: deferred and not passed.
+- T-219 LAN pilot: pending (GATE-3 active).
+- T-220 production restore drill: pending; isolated MySQL test restore passed.
+- T-221 final signoff: pending with GATE-3.
+- GATE-3: active for the MySQL build and not passed.
 
-## 6. Required work when deployment is re-authorized
+## 6. Required work to close GATE-3
 
 1. Run `docs/LAN_SETUP.md` on the physical shop host with a trusted certificate and firewall rule.
 2. Test two or three real clients, including last-unit contention and cross-client report visibility.
-3. Perform a timed restore drill using a production-like backup; reconcile users, catalog, stock,
+3. Perform a timed `mysqldump` restore drill using a production-like backup; reconcile users, catalog, stock,
    sales, returns, voids, payments, and audit counts.
 4. Record screenshots for 1024, 1366, and 1920 widths plus 80 mm print preview.
 5. Review backup retention/off-site storage and service restart policy.

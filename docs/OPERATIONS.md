@@ -1,9 +1,10 @@
 # Auto-Track POS - Operations (local MySQL edition)
 
 This runbook covers the current local shop server. The active mode is self-hosted
-operation on `127.0.0.1` with MySQL on the same machine. LAN/TLS deployment and the
-production recovery drill are deferred by user direction. Do not use the LAN procedure or
-claim production readiness until those steps are re-authorized and verified.
+operation on `127.0.0.1` with MySQL on the same machine. GATE-3 is active for this
+local-only MySQL build (D-052): LAN/TLS deployment and the production recovery drill
+have not yet been executed. Do not use the LAN procedure or claim production readiness
+until the gate evidence and signoff exist.
 
 ## Runtime layout
 
@@ -92,9 +93,10 @@ npm audit --audit-level=high
 The backend suite uses `autotrack_test_mysql` and resets only that database. It refuses to
 run unless `TEST_DATABASE_URL` contains `autotrack_test`.
 
-Latest recorded result (2026-11-06, MySQL 8.4.13): **88/88 backend/browser tests
-passing**, 285 static UI checks, 47 client-logic checks, and 0 `npm audit`
-vulnerabilities. Re-run the commands above before trusting this record after any change.
+Latest recorded result (2026-11-19, MySQL 8.4.13, code commit `716acda`): **92/92
+backend/browser tests passing**, 308 static UI checks, 47 client-logic checks, and 0
+`npm audit --audit-level=high` vulnerabilities. Re-run the commands above before trusting
+this record after any change.
 
 ## Report exports
 
@@ -201,4 +203,4 @@ isolated test database.
 - No printer-specific validation; printing depends on the browser and OS driver.
 - No offline checkout or sync. If the server is unreachable, checkout must stop.
 - No accounting/AP integration; deferred by requirement.
-- No production readiness claim. GATE-3 remains deferred.
+- No production readiness claim. GATE-3 is active for the MySQL build and remains unpassed.
