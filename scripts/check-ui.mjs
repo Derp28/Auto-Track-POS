@@ -163,6 +163,27 @@ check(
   'dashboard KPI header labels are larger and bold',
   /\.insight-kpi__label\s*\{[^}]*font-size:\s*15px[^}]*font-weight:\s*800/s.test(appCss),
 );
+check(
+  'dashboard summary header labels are larger and bold',
+  dashboardSource.includes('stat-grid--six dashboard-summary')
+    && /\.dashboard-summary \.stat-card__label\s*\{[^}]*font-size:\s*16px[^}]*font-weight:\s*800/s.test(appCss),
+);
+check(
+  'dashboard summary cards color-code income and costs',
+  [
+    "tone: data.totalCents ? 'success' : ''",
+    "tone: data.averageSaleCents ? 'success' : ''",
+    "tone: data.discountsCents ? 'warning' : ''",
+    "tone: data.taxCents ? 'warning' : ''",
+    "tone: data.refundsCents ? 'danger' : ''",
+    "tone: data.voidCount ? 'danger' : ''",
+  ].every((needle) => dashboardSource.includes(needle)),
+);
+check(
+  'dashboard summary tone icons are color-coded',
+  /\.dashboard-summary \.stat-card--success \.stat-card__icon\s*\{[^}]*color:\s*var\(--green\)/s.test(appCss)
+    && /\.dashboard-summary \.stat-card--danger \.stat-card__icon\s*\{[^}]*color:\s*var\(--red\)/s.test(appCss),
+);
 const appSource = sources.get(join(publicDir, 'js', 'app.js'));
 check('app binds sidebar help and clears it on navigation', appSource.includes('bindNavHelp(sidebar)') && appSource.includes('hideNavHelp()'));
 

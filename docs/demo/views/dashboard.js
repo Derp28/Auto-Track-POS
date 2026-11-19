@@ -664,12 +664,12 @@ export function renderDashboard(ctx) {
 
       ${!isCashier && insights ? performanceSection(insights, settings) : ''}
 
-      <section class="stat-grid stat-grid--six" aria-label="Today's summary">
-        ${statCard({ label: isCashier ? 'My collected sales today' : 'Collected sales today', value: money(data.totalCents), hint: `${data.transactionCount} completed transaction${data.transactionCount === 1 ? '' : 's'}`, tone: 'accent', iconName: 'cash' })}
-        ${statCard({ label: 'Average sale', value: money(data.averageSaleCents), hint: 'Completed sales only', iconName: 'chart' })}
-        ${statCard({ label: 'Line discounts', value: money(data.discountsCents), hint: 'Discount total', iconName: 'minus' })}
-        ${statCard({ label: 'Tax snapshot', value: money(data.taxCents), hint: taxHint, iconName: 'receipt' })}
-        ${statCard({ label: 'Refunds', value: money(data.refundsCents), hint: `${data.returnsCount} return${data.returnsCount === 1 ? '' : 's'} today`, tone: data.refundsCents ? 'warning' : '', iconName: 'refresh' })}
+      <section class="stat-grid stat-grid--six dashboard-summary" aria-label="Today's summary">
+        ${statCard({ label: isCashier ? 'My collected sales today' : 'Collected sales today', value: money(data.totalCents), hint: `${data.transactionCount} completed transaction${data.transactionCount === 1 ? '' : 's'}`, tone: data.totalCents ? 'success' : '', iconName: 'cash' })}
+        ${statCard({ label: 'Average sale', value: money(data.averageSaleCents), hint: 'Completed sales only', tone: data.averageSaleCents ? 'success' : '', iconName: 'chart' })}
+        ${statCard({ label: 'Line discounts', value: money(data.discountsCents), hint: 'Discount total', tone: data.discountsCents ? 'warning' : '', iconName: 'minus' })}
+        ${statCard({ label: 'Tax snapshot', value: money(data.taxCents), hint: taxHint, tone: data.taxCents ? 'warning' : '', iconName: 'receipt' })}
+        ${statCard({ label: 'Refunds', value: money(data.refundsCents), hint: `${data.returnsCount} return${data.returnsCount === 1 ? '' : 's'} today`, tone: data.refundsCents ? 'danger' : '', iconName: 'refresh' })}
         ${statCard({ label: 'Voids', value: String(data.voidCount), hint: 'Same-day voids', tone: data.voidCount ? 'danger' : '', iconName: 'alert' })}
       </section>
 

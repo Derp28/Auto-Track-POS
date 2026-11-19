@@ -1254,8 +1254,27 @@ kbd {
   letter-spacing: 0.02em;
 }
 
+.dashboard-summary .stat-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-summary .stat-card__label {
+  color: var(--ink-soft);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.dashboard-summary .stat-card__value {
+  margin-top: auto;
+  padding-top: 9px;
+}
+
 .stat-card__icon {
   display: inline-grid;
+  flex: 0 0 auto;
   place-items: center;
   width: 27px;
   height: 27px;
@@ -1263,6 +1282,14 @@ kbd {
   border-radius: 7px;
   color: var(--amber-strong);
   background: #fffdfa;
+}
+
+.dashboard-summary .stat-card--success .stat-card__icon {
+  color: var(--green);
+}
+
+.dashboard-summary .stat-card--danger .stat-card__icon {
+  color: var(--red);
 }
 
 .stat-card__value {

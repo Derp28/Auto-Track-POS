@@ -180,6 +180,12 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
     }));
     assert.equal(kpiHeaderStyles.length, 4);
     assert.ok(kpiHeaderStyles.every((style) => style.fontSize === '15px' && style.fontWeight === '800'));
+    const summaryHeaderStyles = await adminPage.locator('.stat-grid--six .stat-card__label').evaluateAll((labels) => labels.map((node) => {
+      const style = getComputedStyle(node);
+      return { fontSize: style.fontSize, fontWeight: style.fontWeight };
+    }));
+    assert.equal(summaryHeaderStyles.length, 6);
+    assert.ok(summaryHeaderStyles.every((style) => style.fontSize === '16px' && style.fontWeight === '800'));
 
     const tooltip = adminPage.locator('.nav-tooltip');
     const dashboardLink = adminPage.locator('.nav-link[href="#/dashboard"]');
