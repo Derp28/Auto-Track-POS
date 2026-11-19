@@ -220,27 +220,53 @@ function trendChart(trend, currency) {
   if (!points.length) {
     return emptyState({ iconName: 'chart', title: 'No trend data', message: 'Sales history will appear after the first recorded sale.' });
   }
-  const max = Math.max(...points.map((point) => Math.max(0, Number(point.valueCents) || 0)), 1);
+  const values = points.map((point) => Math.max(0, Number(point.valueCents) || 0));
+  const max = Math.max(...values, 1);
   const label = trend.mode === 'yearly' ? 'Yearly net sales trend' : 'Monthly net sales trend';
   const summary = points
     .map((point) => `${point.label}: ${money(point.valueCents, currency)}`)
     .join(', ');
+  const count = points.length;
+  const top = 14;
+  const baseline = 90;
+  const coordinates = points.map((point, index) => ({
+    point,
+    value: values[index],
+    x: ((index + 0.5) / count) * 100,
+    y: baseline - (values[index] / max) * (baseline - top),
+  }));
+  const linePath = coordinates
+    .map(({ x, y }, index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`)
+    .join(' ');
+  const areaPath = `M ${coordinates[0].x.toFixed(2)} ${baseline} ${coordinates
+    .map(({ x, y }) => `L ${x.toFixed(2)} ${y.toFixed(2)}`)
+    .join(' ')} L ${coordinates[coordinates.length - 1].x.toFixed(2)} ${baseline} Z`;
   return `
     <div class="trend-chart" role="img" aria-label="${escapeHtml(`${label}. ${summary}`)}">
       <div class="trend-chart__plot">
-        ${points.map((point) => {
-          const value = Math.max(0, Number(point.valueCents) || 0);
-          const height = value ? Math.max(3, Math.round((value / max) * 100)) : 0;
-          return `
-            <div class="trend-chart__col ${point.isCurrent ? 'is-current' : ''}">
+        <svg class="trend-chart__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="trend-area-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2aa79b" stop-opacity="0.28"></stop>
+              <stop offset="100%" stop-color="#2aa79b" stop-opacity="0"></stop>
+            </linearGradient>
+          </defs>
+          <path class="trend-chart__area" d="${areaPath}"></path>
+          <path class="trend-chart__path" d="${linePath}"></path>
+        </svg>
+        <div class="trend-chart__points">
+          ${coordinates.map(({ point, value, x, y }) => `
+            <div class="trend-chart__point ${point.isCurrent ? 'is-current' : ''}" style="left: ${x.toFixed(2)}%; top: ${y.toFixed(2)}%">
               <span class="trend-chart__value">${escapeHtml(compactMoney(value, currency))}</span>
-              <div class="trend-chart__track" title="${escapeHtml(money(point.valueCents, currency))}">
-                <span class="trend-chart__bar" style="height: ${height}%"></span>
-              </div>
-              <span class="trend-chart__label">${escapeHtml(point.label)}${point.isCurrent ? '<small>MTD</small>' : ''}</span>
+              <span class="trend-chart__dot" title="${escapeHtml(money(point.valueCents, currency))}"></span>
             </div>
-          `;
-        }).join('')}
+          `).join('')}
+        </div>
+      </div>
+      <div class="trend-chart__axis" style="grid-template-columns: repeat(${count}, minmax(0, 1fr));">
+        ${points.map((point) => `
+          <span class="trend-chart__label ${point.isCurrent ? 'is-current' : ''}">${escapeHtml(point.label)}${point.isCurrent ? '<small>MTD</small>' : ''}</span>
+        `).join('')}
       </div>
     </div>
   `;

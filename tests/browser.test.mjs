@@ -168,6 +168,18 @@ test('browser smoke: setup, forced password change, routing, and checkout', { sk
 
     assert.equal(await adminPage.locator('.scope-strip, .quick-action, .quick-actions').count(), 0);
     assert.equal(await adminPage.getByText('Quick actions', { exact: true }).count(), 0);
+    assert.equal(await adminPage.locator('.trend-chart__bar').count(), 0);
+    assert.equal(await adminPage.locator('.trend-chart__path').count(), 1);
+    assert.equal(await adminPage.locator('.trend-chart__dot').count(), 6);
+    const insightPanelHeights = await adminPage.locator('.insight-panels > .insight-panel').evaluateAll((panels) => panels.map((panel) => panel.getBoundingClientRect().height));
+    assert.equal(insightPanelHeights.length, 2);
+    assert.ok(Math.abs(insightPanelHeights[0] - insightPanelHeights[1]) <= 1, `insight panels align: ${insightPanelHeights.join(', ')}`);
+    const kpiHeaderStyles = await adminPage.locator('.insight-kpi__label').evaluateAll((labels) => labels.map((node) => {
+      const style = getComputedStyle(node);
+      return { fontSize: style.fontSize, fontWeight: style.fontWeight };
+    }));
+    assert.equal(kpiHeaderStyles.length, 4);
+    assert.ok(kpiHeaderStyles.every((style) => style.fontSize === '15px' && style.fontWeight === '800'));
 
     const tooltip = adminPage.locator('.nav-tooltip');
     const dashboardLink = adminPage.locator('.nav-link[href="#/dashboard"]');

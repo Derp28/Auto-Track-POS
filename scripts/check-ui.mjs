@@ -152,6 +152,17 @@ check(
 const dashboardSource = sources.get(join(publicDir, 'views', 'dashboard.js'));
 check('dashboard omits the current data-scope strip', !dashboardSource.includes('scope-strip') && !dashboardSource.includes('scopeChip'));
 check('dashboard omits the quick-action cards', !dashboardSource.includes('quick-actions') && !dashboardSource.includes('Start a sale'));
+check('dashboard trend chart renders a line graph', dashboardSource.includes('trend-chart__path') && dashboardSource.includes('trend-chart__dot') && !dashboardSource.includes('trend-chart__bar'));
+check('dashboard trend chart styles use an SVG line', appCss.includes('.trend-chart__path') && appCss.includes('.trend-chart__dot') && !appCss.includes('.trend-chart__bar'));
+check(
+  'dashboard insight cards share one row height',
+  /\.insight-panels\s*\{[^}]*align-items:\s*stretch/s.test(appCss)
+    && /\.insight-panel\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/s.test(appCss),
+);
+check(
+  'dashboard KPI header labels are larger and bold',
+  /\.insight-kpi__label\s*\{[^}]*font-size:\s*15px[^}]*font-weight:\s*800/s.test(appCss),
+);
 const appSource = sources.get(join(publicDir, 'js', 'app.js'));
 check('app binds sidebar help and clears it on navigation', appSource.includes('bindNavHelp(sidebar)') && appSource.includes('hideNavHelp()'));
 
